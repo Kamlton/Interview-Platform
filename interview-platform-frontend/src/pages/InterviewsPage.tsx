@@ -1,0 +1,142 @@
+import { useEffect, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
+import { interviewsApi, candidatesApi, vacanciesApi } from "../api";
+import { apiError } from "../api/client";
+import { useAuth } from "../auth/AuthContext";
+import type { Paged, InterviewListItem, CandidateListItem, Vacancy } from "../types";
+import { PageHeader, Spinner, EmptyState, ErrorState, StatusBadge, Pagination } from "../components/ui";
+
+export default function InterviewsPage() {
+  const navigate = useNavigate();
+  const { hasRole, userId } = useAuth();
+  const canCreate = hasRole("Администратор", "Отдел кадров");
+
+  const [data, setData] = useState<Paged<InterviewListItem> | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [reload, setReload] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true); setError(null);
+    const t = setTimeout(() => {
+      interviewsApi.registry(page, 20, search)
+        .then((d) => active && setData(d))
+        .catch((e) => active && setError(apiError(e)))
+        .finally(() => active && setLoading(false));
+    }, search ? 300 : 0);
+    return () => { active = false; clearTimeout(t); };
+  }, [page, search, reload]);
+
+  return (
+    <>
+      <PageHeader title="Собеседования">
+        {canCreate && (
+          <button className="btn" onClick={() => setShowForm((s) => !s)}>
+            {showForm ? "Скрыть форму" : "Назначить собеседование"}
+          </button>
+        )}
+      </PageHeader>
+
+      {showForm && canCreate && (
+        <CreateInterview interviewerId={userId} onCreated={() => { setShowForm(false); setReload((x) => x + 1); }} />
+      )}
+
+      <div className="toolbar">
+        <input className="input search" placeholder="Поиск по кандидату или вакансии"
+          value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} />
+      </div>
+
+      <div className="panel table-wrap">
+        {loading ? <Spinner /> : error ? <ErrorState message={error} /> :
+          !data || data.items.length === 0 ? (
+            <EmptyState title="Собеседований не найдено" hint="Назначьте новое собеседование." />
+          ) : (
+            <table className="data">
+              <thead>
+                <tr><th>Кандидат</th><th>Вакансия</th><th>Интервьюер</th><th>Дата</th><th>Статус</th></tr>
+              </thead>
+              <tbody>
+                {data.items.map((iv) => (
+                  <tr key={iv.id} className="clickable" onClick={() => navigate(`/interviews/${iv.id}`)}>
+                    <td>{iv.candidateName}</td>
+                    <td>{iv.vacancyTitle}</td>
+                    <td className="muted">{iv.interviewerName}</td>
+                    <td className="muted">{new Date(iv.scheduledAt).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })}</td>
+                    <td><StatusBadge status={iv.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+      </div>
+      {data && <Pagination page={data.page} totalPages={data.totalPages} onChange={setPage} />}
+    </>
+  );
+}
+
+function CreateInterview({ interviewerId, onCreated }:
+  { interviewerId: string | null; onCreated: () => void }) {
+  const [candidates, setCandidates] = useState<CandidateListItem[]>([]);
+  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [candidateId, setCandidateId] = useState("");
+  const [vacancyId, setVacancyId] = useState("");
+  const [plan, setPlan] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    Promise.all([candidatesApi.registry(1, 100, "", false), vacanciesApi.list()])
+      .then(([c, v]) => { setCandidates(c.items); setVacancies(v); })
+      .catch((e) => setError(apiError(e)));
+  }, []);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!interviewerId) { setError("Не удалось определить текущего пользователя"); return; }
+    setBusy(true); setError(null);
+    try {
+      const iv = await interviewsApi.create({
+        candidateId, vacancyId, interviewerUserId: interviewerId,
+        plan: plan || undefined, scheduledAt: new Date(scheduledAt).toISOString(),
+      });
+      onCreated();
+      return iv;
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="card" onSubmit={submit}>
+      <h2>Новое собеседование</h2>
+      {error && <ErrorState message={error} />}
+      <div className="grid-2">
+        <div className="field"><label>Кандидат *</label>
+          <select className="select" value={candidateId} required onChange={(e) => setCandidateId(e.target.value)}>
+            <option value="" disabled>Выберите кандидата</option>
+            {candidates.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
+          </select></div>
+        <div className="field"><label>Вакансия *</label>
+          <select className="select" value={vacancyId} required onChange={(e) => setVacancyId(e.target.value)}>
+            <option value="" disabled>Выберите вакансию</option>
+            {vacancies.map((v) => <option key={v.id} value={v.id}>{v.title}</option>)}
+          </select></div>
+      </div>
+      <div className="field"><label>Дата и время *</label>
+        <input className="input" type="datetime-local" required value={scheduledAt}
+          onChange={(e) => setScheduledAt(e.target.value)} /></div>
+      <div className="field"><label>План собеседования</label>
+        <textarea className="textarea" value={plan} onChange={(e) => setPlan(e.target.value)} /></div>
+      <div className="btn-row">
+        <button className="btn" type="submit" disabled={busy}>{busy ? "Создаём…" : "Создать"}</button>
+      </div>
+    </form>
+  );
+}
