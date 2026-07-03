@@ -7,6 +7,13 @@ public record SaveScoresRequest(List<ScoreInput> Scores, string? Summary);
 
 public record ScoreLine(Guid CompetencyId, string CompetencyName, int Score, string? Comment);
 public record ProtocolDto(
-    Guid InterviewId, string CandidateName, string VacancyTitle, DateTimeOffset ScheduledAt,
-    InterviewStatus Status, string? Summary, double AverageScore,
-    IReadOnlyList<ScoreLine> Scores, string? Decision);
+    Guid InterviewId, 
+    string CandidateName, 
+    string VacancyTitle, 
+    DateTimeOffset ScheduledAt,
+    InterviewStatus Status, 
+    string? Summary, 
+    double AverageScore,
+    IReadOnlyList<ScoreLine> Scores, 
+    string? Decision
+);
