@@ -5,6 +5,7 @@ import { api, apiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import type { InterviewDetails, Competency, Protocol, DecisionType, DocumentType } from "../types";
 import { PageHeader, Spinner, ErrorState, StatusBadge } from "../components/ui";
+import { RadarChart } from "../components/RadarChart";
 
 interface Row { competencyId: string; name: string; score: number | ""; comment: string; }
 
@@ -87,6 +88,7 @@ export default function InterviewPage() {
       {msg && <div className="state" style={{ color: "var(--green)", justifyContent: "flex-start" }}>{msg}</div>}
 
       <div className="cols">
+        {/* ЛЕВЫЙ СТОЛБЕЦ — Оценки и печатные формы */}
         <div>
           <div className="card">
             <h2>Оценка компетенций</h2>
@@ -121,8 +123,19 @@ export default function InterviewPage() {
             </div>
             {canScore && <div className="btn-row"><button className="btn" onClick={saveScores}>Сохранить оценки</button></div>}
           </div>
+
+          {/* --- ПЕЧАТНЫЕ ФОРМЫ ПЕРЕНЕСЕНЫ СЮДА --- */}
+          <div className="card" style={{ marginTop: "var(--gap)" }}>
+            <h2>Печатные формы</h2>
+            <div className="btn-row">
+              <button className="btn btn-ghost btn-sm" onClick={() => download("InterviewProtocol")}>Протокол (PDF)</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => download("OfferLetter")}>Оффер (PDF)</button>
+              <button className="btn btn-ghost btn-sm" onClick={() => download("RejectionLetter")}>Отказ (PDF)</button>
+            </div>
+          </div>
         </div>
 
+        {/* ПРАВЫЙ СТОЛБЕЦ — Данные и решение */}
         <div>
           <div className="card">
             <h2>Данные</h2>
@@ -148,15 +161,22 @@ export default function InterviewPage() {
             </div>
           )}
 
-          <div className="card">
-            <h2>Печатные формы</h2>
-            <div className="btn-row">
-              <button className="btn btn-ghost btn-sm" onClick={() => download("InterviewProtocol")}>Протокол (PDF)</button>
-              <button className="btn btn-ghost btn-sm" onClick={() => download("OfferLetter")}>Оффер (PDF)</button>
-              <button className="btn btn-ghost btn-sm" onClick={() => download("RejectionLetter")}>Отказ (PDF)</button>
-            </div>
+          {/* Радар-график с оценками */}
+        {protocol && protocol.scores && protocol.scores.length > 0 && (
+          <div className="card" style={{ marginTop: 'var(--gap)' }}>
+            <h2>Визуализация оценок</h2>
+            <RadarChart
+              scores={protocol.scores.map((s) => ({
+                competency: s.competencyName,
+                score: s.score,
+              }))}
+              maxScore={10}
+            />
           </div>
+        )}
+
         </div>
+        
       </div>
     </>
   );
