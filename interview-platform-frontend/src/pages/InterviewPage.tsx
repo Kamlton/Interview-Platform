@@ -98,10 +98,10 @@ export default function InterviewPage() {
                     <tr key={r.competencyId}>
                       <td>{r.name}</td>
                       <td>
-                        <input className="input score-input" type="number" min={1} max={5} disabled={!canScore}
+                        <input className="input score-input" type="number" min={1} max={10} disabled={!canScore}
                           value={r.score}
                           onChange={(e) => {
-                            const v = e.target.value === "" ? "" : Math.max(1, Math.min(5, Number(e.target.value)));
+                            const v = e.target.value === "" ? "" : Math.max(1, Math.min(10, Number(e.target.value)));
                             setRows((rs) => rs.map((x, j) => j === i ? { ...x, score: v } : x));
                           }} />
                       </td>
