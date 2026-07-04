@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using InterviewPlatform.Api.Domain.Enums;
 
 namespace InterviewPlatform.Api.Features.Candidates;
@@ -10,5 +11,14 @@ public record CandidateDetails(
     IReadOnlyList<string> Skills);
 
 public record SaveCandidateRequest(
-    string FullName, string? Phone, string? City, string? Education,
-    string? PreviousWorkplace, List<string>? Skills);
+    [RegularExpression(@"^\s*\S+\s+\S+.*$", ErrorMessage = "Пожалуйста, введите полное ФИО кандидата.")]
+    string FullName,
+
+    [RegularExpression(@"^(\+7|8)\d{10}$", ErrorMessage = "Пожалуйста, введите корректный номер телефона")]
+    string? Phone,
+
+    string? City, 
+    string? Education,
+    string? PreviousWorkplace, 
+    List<string>? Skills
+);
