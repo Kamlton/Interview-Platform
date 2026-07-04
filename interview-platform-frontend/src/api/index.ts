@@ -45,9 +45,9 @@ export const matricesApi = {
 };
 
 export const interviewsApi = {
-  registry: (page: number, size: number, search: string, candidateId?: string) =>
+  registry: (page: number, size: number, search: string, candidateId?: string, vacancyId?: string) =>
     api.get<Paged<InterviewListItem>>("/api/interviews",
-      { params: { page, size, search: search || undefined, candidateId } }).then((r) => r.data),
+      { params: { page, size, search: search || undefined, candidateId, vacancyId } }).then((r) => r.data),
   get: (id: string) => api.get<InterviewDetails>(`/api/interviews/${id}`).then((r) => r.data),
   create: (body: {
     candidateId: string; vacancyId: string; interviewerUserId: string;

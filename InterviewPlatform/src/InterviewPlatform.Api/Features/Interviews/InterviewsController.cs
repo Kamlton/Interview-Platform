@@ -12,8 +12,9 @@ public class InterviewsController(InterviewService service) : ControllerBase
 {
     [HttpGet]
     public Task<PagedResult<InterviewListItem>> Registry(
-        [FromQuery] PageQuery query, [FromQuery] Guid? candidateId = null, CancellationToken ct = default)
-        => service.GetRegistryAsync(query, candidateId, ct);
+        [FromQuery] PageQuery query, [FromQuery] Guid? candidateId = null,
+        [FromQuery] Guid? vacancyId = null, CancellationToken ct = default)
+        => service.GetRegistryAsync(query, candidateId, vacancyId, ct);
 
     [HttpGet("{id:guid}")]
     public Task<InterviewDetails> Get(Guid id, CancellationToken ct) => service.GetAsync(id, ct);
