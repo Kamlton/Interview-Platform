@@ -48,6 +48,7 @@ public class InterviewService(AppDbContext db, IAuditService audit)
             throw new NotFoundException("Матрица не найдена");
 
         await EnsureNoScheduleConflictAsync(req.VacancyId, req.ScheduledAt, excludeInterviewId: null, ct);
+        await EnsureNoCandidateScheduleConflictAsync(req.CandidateId, req.ScheduledAt, excludeInterviewId: null, ct);
 
         var interview = new Interview
         {
@@ -84,5 +85,22 @@ public class InterviewService(AppDbContext db, IAuditService audit)
             throw new ConflictException(
                 "Выбранное время пересекается с другим собеседованием по этой вакансии. " +
                 "Между собеседованиями должен быть перерыв минимум 1 час.");
+    }
+
+    async Task EnsureNoCandidateScheduleConflictAsync(
+        Guid candidateId, DateTimeOffset scheduledAt, Guid? excludeInterviewId, CancellationToken ct)
+    {
+        var windowStart = scheduledAt.Subtract(InterviewDuration);
+        var windowEnd = scheduledAt.Add(InterviewDuration);
+
+        var conflict = await db.Interviews.AsNoTracking()
+            .Where(i => i.CandidateId == candidateId && !i.IsArchived && i.Status != InterviewStatus.Cancelled)
+            .Where(i => excludeInterviewId == null || i.Id != excludeInterviewId)
+            .AnyAsync(i => i.ScheduledAt >= windowStart && i.ScheduledAt < windowEnd, ct);
+
+        if (conflict)
+            throw new ConflictException(
+                "У кандидата уже есть собеседование в это время. " +
+                "Один кандидат не может быть записан на два собеседования одновременно.");
     }
 }

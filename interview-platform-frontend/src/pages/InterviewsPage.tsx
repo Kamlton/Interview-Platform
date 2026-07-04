@@ -93,6 +93,7 @@ function CreateInterview({ interviewerId, onCreated }:
   const [scheduledDate, setScheduledDate] = useState("");
   const [scheduledTime, setScheduledTime] = useState("");
   const [vacancyInterviews, setVacancyInterviews] = useState<string[]>([]);
+  const [candidateInterviews, setCandidateInterviews] = useState<string[]>([]);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,34 +105,83 @@ function CreateInterview({ interviewerId, onCreated }:
   }, []);
 
   useEffect(() => {
-    if (!vacancyId) {
+    let active = true;
+
+    if (!vacancyId && !candidateId) {
       setVacancyInterviews([]);
+      setCandidateInterviews([]);
+      setLoadingSchedule(false);
       return;
     }
-    let active = true;
+
     setLoadingSchedule(true);
-    interviewsApi.registry(1, 200, "", undefined, vacancyId)
-      .then((data) => {
-        if (!active) return;
-        const times = data.items
-          .filter((iv) => iv.status !== "Cancelled")
-          .map((iv) => iv.scheduledAt);
-        setVacancyInterviews(times);
-      })
+    const requests: Promise<void>[] = [];
+
+    if (vacancyId) {
+      requests.push(
+        interviewsApi.registry(1, 200, "", undefined, vacancyId)
+          .then((data) => {
+            if (!active) return;
+            setVacancyInterviews(
+              data.items.filter((iv) => iv.status !== "Cancelled").map((iv) => iv.scheduledAt),
+            );
+          }),
+      );
+    } else {
+      setVacancyInterviews([]);
+    }
+
+    if (candidateId) {
+      requests.push(
+        interviewsApi.registry(1, 200, "", candidateId, undefined)
+          .then((data) => {
+            if (!active) return;
+            setCandidateInterviews(
+              data.items.filter((iv) => iv.status !== "Cancelled").map((iv) => iv.scheduledAt),
+            );
+          }),
+      );
+    } else {
+      setCandidateInterviews([]);
+    }
+
+    Promise.all(requests)
       .catch((e) => active && setError(apiError(e)))
       .finally(() => active && setLoadingSchedule(false));
+
     return () => { active = false; };
-  }, [vacancyId]);
+  }, [vacancyId, candidateId]);
 
   const blockedTimes = useMemo(() => {
-    if (!scheduledDate || !vacancyId) return new Set<string>();
-    const sameDay = getScheduledTimesForDate(scheduledDate, vacancyInterviews);
-    return getBlockedTimesForDate(scheduledDate, sameDay);
-  }, [scheduledDate, vacancyId, vacancyInterviews]);
+    if (!scheduledDate) return new Set<string>();
+    const blocked = new Set<string>();
+
+    if (vacancyId) {
+      const sameDayVacancy = getScheduledTimesForDate(scheduledDate, vacancyInterviews);
+      for (const t of getBlockedTimesForDate(scheduledDate, sameDayVacancy, undefined, "vacancy")) {
+        blocked.add(t);
+      }
+    }
+
+    if (candidateId) {
+      const sameDayCandidate = getScheduledTimesForDate(scheduledDate, candidateInterviews);
+      for (const t of getBlockedTimesForDate(scheduledDate, sameDayCandidate, undefined, "candidate")) {
+        blocked.add(t);
+      }
+    }
+
+    return blocked;
+  }, [scheduledDate, vacancyId, candidateId, vacancyInterviews, candidateInterviews]);
 
   useEffect(() => {
     if (scheduledTime && blockedTimes.has(scheduledTime)) setScheduledTime("");
   }, [blockedTimes, scheduledTime]);
+
+  function onCandidateChange(id: string) {
+    setCandidateId(id);
+    setScheduledDate("");
+    setScheduledTime("");
+  }
 
   function onVacancyChange(id: string) {
     setVacancyId(id);
@@ -144,7 +194,7 @@ function CreateInterview({ interviewerId, onCreated }:
     if (!interviewerId) { setError("Не удалось определить текущего пользователя"); return; }
     if (!scheduledDate || !scheduledTime) { setError("Укажите дату и время"); return; }
     if (blockedTimes.has(scheduledTime)) {
-      setError("Выбранное время занято другим собеседованием по этой вакансии");
+      setError("Выбранное время недоступно — занято по вакансии или у кандидата уже есть собеседование в это время");
       return;
     }
     setBusy(true); setError(null);
@@ -169,7 +219,7 @@ function CreateInterview({ interviewerId, onCreated }:
       {error && <ErrorState message={error} />}
       <div className="grid-2">
         <div className="field"><label>Кандидат *</label>
-          <select className="select" value={candidateId} required onChange={(e) => setCandidateId(e.target.value)}>
+          <select className="select" value={candidateId} required onChange={(e) => onCandidateChange(e.target.value)}>
             <option value="" disabled>Выберите кандидата</option>
             {candidates.map((c) => <option key={c.id} value={c.id}>{c.fullName}</option>)}
           </select></div>
@@ -193,11 +243,11 @@ function CreateInterview({ interviewerId, onCreated }:
             onChange={setScheduledTime}
             blockedTimes={blockedTimes}
             required
-            disabled={!scheduledDate || !vacancyId || loadingSchedule}
+            disabled={!scheduledDate || !vacancyId || !candidateId || loadingSchedule}
           />
-          {vacancyId && scheduledDate && blockedTimes.size > 0 && (
+          {(vacancyId || candidateId) && scheduledDate && blockedTimes.size > 0 && (
             <span className="field-hint">
-              Занятые слоты недоступны — собеседование по одной вакансии длится 1 час с перерывом.
+              Занятые слоты недоступны: конфликт по вакансии или у выбранного кандидата уже есть собеседование в этот день.
             </span>
           )}
         </div>

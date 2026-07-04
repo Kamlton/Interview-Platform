@@ -24,10 +24,13 @@ export function combineDateAndTime(date: string, time: string): Date {
   return new Date(`${date}T${time}:00`);
 }
 
+export type ScheduleBlockMode = "vacancy" | "candidate";
+
 export function isTimeSlotBlocked(
   date: string,
   time: string,
   existingScheduledAt: string[],
+  mode: ScheduleBlockMode = "vacancy",
 ): boolean {
   const start = combineDateAndTime(date, time).getTime();
   const end = start + INTERVIEW_DURATION_MS;
@@ -35,6 +38,10 @@ export function isTimeSlotBlocked(
   return existingScheduledAt.some((iso) => {
     const existingStart = new Date(iso).getTime();
     const existingEnd = existingStart + INTERVIEW_DURATION_MS;
+    if (mode === "candidate") {
+      // Кандидат не может начать сразу после окончания другого собеседования (10:00–11:00 блокирует 11:00).
+      return start <= existingEnd && end > existingStart;
+    }
     return start < existingEnd && end > existingStart;
   });
 }
@@ -43,10 +50,11 @@ export function getBlockedTimesForDate(
   date: string,
   existingScheduledAt: string[],
   stepMinutes = TIME_STEP_MINUTES,
+  mode: ScheduleBlockMode = "vacancy",
 ): Set<string> {
   const blocked = new Set<string>();
   for (const time of generateTimeSlots(stepMinutes)) {
-    if (isTimeSlotBlocked(date, time, existingScheduledAt)) {
+    if (isTimeSlotBlocked(date, time, existingScheduledAt, mode)) {
       blocked.add(time);
     }
   }

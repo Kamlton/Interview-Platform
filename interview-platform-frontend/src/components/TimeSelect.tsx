@@ -50,7 +50,7 @@ export function TimeSelect({ value, onChange, blockedTimes, required, disabled }
                   type="button"
                   className={"time-option" + (selected ? " selected" : "") + (blocked ? " blocked" : "")}
                   disabled={blocked}
-                  title={blocked ? "Время занято другим собеседованием по этой вакансии" : undefined}
+                  title={blocked ? "Время занято (конфликт по вакансии или расписанию кандидата)" : undefined}
                   onClick={() => { onChange(time); setOpen(false); }}
                 >
                   {time}
