@@ -1,5 +1,6 @@
 using InterviewPlatform.Api.Common;
 using InterviewPlatform.Api.Domain.Entities;
+using InterviewPlatform.Api.Domain.Enums;
 using InterviewPlatform.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,10 +8,12 @@ namespace InterviewPlatform.Api.Features.Interviews;
 
 public class InterviewService(AppDbContext db, IAuditService audit)
 {
-    public async Task<PagedResult<InterviewListItem>> GetRegistryAsync(PageQuery q, Guid? candidateId, CancellationToken ct)
+    public async Task<PagedResult<InterviewListItem>> GetRegistryAsync(
+        PageQuery q, Guid? candidateId, Guid? vacancyId, CancellationToken ct)
     {
         var query = db.Interviews.AsNoTracking().Where(i => !i.IsArchived);
         if (candidateId is { } cid) query = query.Where(i => i.CandidateId == cid);
+        if (vacancyId is { } vid) query = query.Where(i => i.VacancyId == vid);
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
             var s = q.Search.Trim();
@@ -44,6 +47,9 @@ public class InterviewService(AppDbContext db, IAuditService audit)
         if (req.MatrixId is { } mid && !await db.CompetencyMatrices.AnyAsync(m => m.Id == mid, ct))
             throw new NotFoundException("Матрица не найдена");
 
+        await EnsureNoScheduleConflictAsync(req.VacancyId, req.ScheduledAt, excludeInterviewId: null, ct);
+        await EnsureNoCandidateScheduleConflictAsync(req.CandidateId, req.ScheduledAt, excludeInterviewId: null, ct);
+
         var interview = new Interview
         {
             Id = Guid.NewGuid(),
@@ -58,5 +64,43 @@ public class InterviewService(AppDbContext db, IAuditService audit)
         await db.SaveChangesAsync(ct);
         await audit.LogAsync(nameof(Candidate), req.CandidateId, "InterviewCreated", new { interview.Id }, ct);
         return await GetAsync(interview.Id, ct);
+    }
+
+    static readonly TimeSpan InterviewDuration = TimeSpan.FromHours(1);
+
+    async Task EnsureNoScheduleConflictAsync(
+        Guid vacancyId, DateTimeOffset scheduledAt, Guid? excludeInterviewId, CancellationToken ct)
+    {
+        // Эквивалент пересечения [scheduledAt, scheduledAt+1ч) и [i.ScheduledAt, i.ScheduledAt+1ч),
+        // но без .Add() в LINQ — EF Core не переводит DateTimeOffset.Add в SQL.
+        var windowStart = scheduledAt.Subtract(InterviewDuration);
+        var windowEnd = scheduledAt.Add(InterviewDuration);
+
+        var conflict = await db.Interviews.AsNoTracking()
+            .Where(i => i.VacancyId == vacancyId && !i.IsArchived && i.Status != InterviewStatus.Cancelled)
+            .Where(i => excludeInterviewId == null || i.Id != excludeInterviewId)
+            .AnyAsync(i => i.ScheduledAt > windowStart && i.ScheduledAt < windowEnd, ct);
+
+        if (conflict)
+            throw new ConflictException(
+                "Выбранное время пересекается с другим собеседованием по этой вакансии. " +
+                "Между собеседованиями должен быть перерыв минимум 1 час.");
+    }
+
+    async Task EnsureNoCandidateScheduleConflictAsync(
+        Guid candidateId, DateTimeOffset scheduledAt, Guid? excludeInterviewId, CancellationToken ct)
+    {
+        var windowStart = scheduledAt.Subtract(InterviewDuration);
+        var windowEnd = scheduledAt.Add(InterviewDuration);
+
+        var conflict = await db.Interviews.AsNoTracking()
+            .Where(i => i.CandidateId == candidateId && !i.IsArchived && i.Status != InterviewStatus.Cancelled)
+            .Where(i => excludeInterviewId == null || i.Id != excludeInterviewId)
+            .AnyAsync(i => i.ScheduledAt >= windowStart && i.ScheduledAt < windowEnd, ct);
+
+        if (conflict)
+            throw new ConflictException(
+                "У кандидата уже есть собеседование в это время. " +
+                "Один кандидат не может быть записан на два собеседования одновременно.");
     }
 }
