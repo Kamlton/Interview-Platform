@@ -107,3 +107,10 @@ export interface Protocol {
 }
 
 export interface UserDto { id: string; fullName: string; email: string; role: Role; isActive: boolean; }
+
+export interface AuditLogEntry {
+  username: string;
+  role: string;
+  time: string;
+  action: string;
+}

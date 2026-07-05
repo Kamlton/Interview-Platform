@@ -6,6 +6,7 @@ using InterviewPlatform.Api.Features.Auth;
 using InterviewPlatform.Api.Features.Candidates;
 using InterviewPlatform.Api.Features.Interviews;
 using InterviewPlatform.Api.Features.Assessment;
+using InterviewPlatform.Api.Features.Audit;
 using InterviewPlatform.Api.Features.PrintForms;
 using InterviewPlatform.Api.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -55,6 +56,9 @@ builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+// Файловый аудит действий пользователя (клики, переходы). Singleton — сервис
+// держит словарь блокировок на файлы, он должен быть один на процесс.
+builder.Services.AddSingleton<IUserActionAuditService, UserActionAuditService>();
 builder.Services.AddScoped<CandidateService>();
 builder.Services.AddScoped<InterviewService>();
 builder.Services.AddScoped<AssessmentService>();
