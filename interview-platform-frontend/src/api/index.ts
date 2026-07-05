@@ -2,7 +2,7 @@ import { api } from "./client";
 import type {
   AuthResponse, Paged, CandidateListItem, CandidateDetails, SaveCandidate,
   Vacancy, Competency, Matrix, InterviewListItem, InterviewDetails, Protocol,
-  UserDto, DecisionType, DocumentType,
+  UserDto, DecisionType, DocumentType, AuditLogEntry,
 } from "../types";
 
 export const authApi = {
@@ -45,9 +45,9 @@ export const matricesApi = {
 };
 
 export const interviewsApi = {
-  registry: (page: number, size: number, search: string, candidateId?: string) =>
+  registry: (page: number, size: number, search: string, candidateId?: string, vacancyId?: string) =>
     api.get<Paged<InterviewListItem>>("/api/interviews",
-      { params: { page, size, search: search || undefined, candidateId } }).then((r) => r.data),
+      { params: { page, size, search: search || undefined, candidateId, vacancyId } }).then((r) => r.data),
   get: (id: string) => api.get<InterviewDetails>(`/api/interviews/${id}`).then((r) => r.data),
   create: (body: {
     candidateId: string; vacancyId: string; interviewerUserId: string;
@@ -65,4 +65,11 @@ export const usersApi = {
   list: () => api.get<UserDto[]>("/api/users").then((r) => r.data),
   create: (body: { fullName: string; email: string; password: string; role: string }) =>
     api.post<UserDto>("/api/users", body).then((r) => r.data),
+};
+
+export const auditApi = {
+  logAction: (action: string) => api.post("/api/audit/actions", { action }),
+  userHistory: (username: string) =>
+    api.get<AuditLogEntry[]>(`/api/audit/users/${encodeURIComponent(username)}/actions`)
+      .then((r) => r.data),
 };
