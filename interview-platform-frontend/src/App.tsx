@@ -9,6 +9,7 @@ import InterviewPage from "./pages/InterviewPage";
 import VacanciesPage from "./pages/VacanciesPage";
 import CompetenciesPage from "./pages/CompetenciesPage";
 import UsersPage from "./pages/UsersPage";
+import AuditPage from "./pages/AuditPage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 
 export default function App() {
@@ -33,6 +34,7 @@ export default function App() {
 
           <Route element={<ProtectedRoute roles={["Администратор"]} />}>
             <Route path="users" element={<UsersPage />} />
+            <Route path="audit" element={<AuditPage />} />
           </Route>
         </Route>
       </Route>

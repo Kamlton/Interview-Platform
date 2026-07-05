@@ -2,7 +2,7 @@ import { api } from "./client";
 import type {
   AuthResponse, Paged, CandidateListItem, CandidateDetails, SaveCandidate,
   Vacancy, Competency, Matrix, InterviewListItem, InterviewDetails, Protocol,
-  UserDto, DecisionType, DocumentType,
+  UserDto, DecisionType, DocumentType, AuditLogEntry,
 } from "../types";
 
 export const authApi = {
@@ -65,4 +65,11 @@ export const usersApi = {
   list: () => api.get<UserDto[]>("/api/users").then((r) => r.data),
   create: (body: { fullName: string; email: string; password: string; role: string }) =>
     api.post<UserDto>("/api/users", body).then((r) => r.data),
+};
+
+export const auditApi = {
+  logAction: (action: string) => api.post("/api/audit/actions", { action }),
+  userHistory: (username: string) =>
+    api.get<AuditLogEntry[]>(`/api/audit/users/${encodeURIComponent(username)}/actions`)
+      .then((r) => r.data),
 };
