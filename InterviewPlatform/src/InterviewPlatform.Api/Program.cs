@@ -111,16 +111,21 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// ----- Миграции + сидинг при старте -----
-
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var hasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-    await DbSeeder.SeedAsync(db, hasher, app.Configuration);
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>(); 
+        await context.Database.MigrateAsync(); 
+        Console.WriteLine("База данных успешно обновлена!");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Ошибка при автоматическом обновлении базы: {ex.Message}");
+    }
 }
 
 app.Run();
 
-// Делает класс Program видимым для интеграционных тестов (WebApplicationFactory<Program>).
 public partial class Program { }
