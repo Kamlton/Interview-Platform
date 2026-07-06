@@ -264,3 +264,26 @@ table.data tbody tr.clickable { cursor: pointer; }
 .error-content .btn-primary:hover {
   background: #1d4ed8;
 }
+
+.current-datetime {
+  padding: 10px 16px;
+  margin: 6px 0 12px 0;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.datetime-date {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.datetime-time {
+  font-size: 18px;
+  font-weight: 600;
+  color: #e2e8f0;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}

@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react"; // <-- ДОБАВЬТЕ
 import { useAuth } from "../auth/AuthContext";
 import AuditTracker from "../audit/AuditTracker";
 import type { Role } from "../types";
@@ -14,6 +15,36 @@ const NAV: NavItem[] = [
   { to: "/audit", label: "Аудит", roles: ["Администратор"] },
 ];
 
+function CurrentDateTime() {
+  const [dateTime, setDateTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setDateTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="current-datetime">
+      <div className="datetime-date">
+        {dateTime.toLocaleDateString("ru-RU", {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+        })}
+      </div>
+      <div className="datetime-time">
+        {dateTime.toLocaleTimeString("ru-RU", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Layout() {
   const { fullName, role, logout, hasRole } = useAuth();
   const navigate = useNavigate();
@@ -27,6 +58,8 @@ export default function Layout() {
           <span className="brand-mark">ИС</span>
           <span className="brand-text">Собеседования</span>
         </div>
+        {/* <-- ДОБАВЛЯЕМ ДАТУ И ВРЕМЯ ПОД БРЕНДОМ --> */}
+        <CurrentDateTime />
         <nav className="nav">
           {items.map((i) => (
             <NavLink key={i.to} to={i.to}
