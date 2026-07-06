@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { usersApi } from "../api";
 import { apiError } from "../api/client";
-import type { UserDto, Role } from "../types/types";
+import type { UserDto, Role } from "../types";
 import { PageHeader, Spinner, EmptyState, StatusBadge } from "../components/ui";
 
 const ROLES: Role[] = ["Администратор", "Отдел кадров", "Решала"];

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { interviewsApi, competenciesApi } from "../api";
+import { interviewsApi, vacanciesApi } from "../api";
 import { api, apiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import type { InterviewDetails, Competency, Protocol, DecisionType, DocumentType } from "../types";
@@ -28,13 +28,21 @@ export default function InterviewPage() {
     if (!id) return;
     setLoading(true); setError(null);
     try {
-      const [d, comps, proto] = await Promise.all([
-        interviewsApi.get(id), competenciesApi.list(), interviewsApi.protocol(id),
+      const [d, proto] = await Promise.all([
+        interviewsApi.get(id), 
+        interviewsApi.protocol(id),
       ]);
-      setDetails(d); setProtocol(proto); setSummary(proto.summary ?? "");
+
+      setDetails(d);
+      setProtocol(proto);
+      setSummary(proto.summary ?? "");
+
+      const comps = await vacanciesApi.getCompetencies(d.vacancyId);
+      //setDetails(d); setProtocol(proto); setSummary(proto.summary ?? "");
       const byComp = new Map(proto.scores.map((s) => [s.competencyId, s]));
       setRows(comps.map((c: Competency) => ({
-        competencyId: c.id, name: c.name,
+        competencyId: c.id, 
+        name: c.name,
         score: byComp.get(c.id)?.score ?? "",
         comment: byComp.get(c.id)?.comment ?? "",
       })));
