@@ -27,9 +27,11 @@ export const candidatesApi = {
 
 export const vacanciesApi = {
   list: (includeArchived = false) =>
-    api.get<Vacancy[]>("/api/vacancies", { params: { includeArchived } }).then((r) => r.data),
-  create: (title: string, description?: string) =>
-    api.post<Vacancy>("/api/vacancies", { title, description }).then((r) => r.data),
+  api.get<Vacancy[]>("/api/vacancies", { params: { includeArchived } }).then((r) => r.data),
+  create: (body: {title: string; description?: string; competencies?: any[] }) =>
+    api.post<Vacancy>("/api/vacancies", body).then((r) => r.data),
+  getCompetencies: (vacancyId: string) => 
+    api.get<any[]>(`/api/vacancies/${vacancyId}/competencies`).then(r => r.data),
 };
 
 export const competenciesApi = {

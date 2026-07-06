@@ -7,6 +7,6 @@ public class CompetencyScore
     public Interview Interview { get; set; } = null!;
     public Guid CompetencyId { get; set; }
     public Competency Competency { get; set; } = null!;
-    public int Score { get; set; }          // 1..5
+    public int Score { get; set; }
     public string? Comment { get; set; }
 }

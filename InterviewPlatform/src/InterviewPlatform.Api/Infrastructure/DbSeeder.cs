@@ -36,17 +36,6 @@ public static class DbSeeder
             await db.SaveChangesAsync();
         }
 
-        if (!await db.Competencies.AnyAsync())
-        {
-            db.Competencies.AddRange(
-                new Competency { Id = Guid.NewGuid(), Name = "Алгоритмы и структуры данных", Category = "Hard" },
-                new Competency { Id = Guid.NewGuid(), Name = "Знание языка/платформы",       Category = "Hard" },
-                new Competency { Id = Guid.NewGuid(), Name = "Проектирование/архитектура",    Category = "Hard" },
-                new Competency { Id = Guid.NewGuid(), Name = "Коммуникация",                  Category = "Soft" },
-                new Competency { Id = Guid.NewGuid(), Name = "Командная работа",              Category = "Soft" });
-            await db.SaveChangesAsync();
-        }
-
         if (!await db.DocumentTemplates.AnyAsync())
         {
             db.DocumentTemplates.AddRange(
