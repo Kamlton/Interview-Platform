@@ -15,14 +15,19 @@ export default function LoginPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setBusy(true); setError(null);
+    setBusy(true); 
+    setError(null);
+  
     try {
-      await login(email.trim(), password);
+      await login(email.trim(), password.trim());
       navigate("/", { replace: true });
-    } catch (err) {
-      setError(apiError(err));
-    } finally {
+    } catch (err: any) {
       setBusy(false);
+      if (err.response?.status === 401 || err.response?.status === 400) {
+        setError("E-mail или пароль введены неверно");
+      } else {
+        setError(apiError(err));
+      }
     }
   }
 
@@ -36,7 +41,7 @@ export default function LoginPage() {
 
         <div className="field">
           <label htmlFor="email">E-mail</label>
-          <input id="email" className="input" type="email" value={email}
+          <input id="email" className="input" type="text" value={email}
             onChange={(e) => setEmail(e.target.value)} autoComplete="username" required />
         </div>
         <div className="field">

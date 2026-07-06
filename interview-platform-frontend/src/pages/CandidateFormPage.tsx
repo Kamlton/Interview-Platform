@@ -43,10 +43,31 @@ export default function CandidateFormPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setBusy(true); setError(null);
+    // 1. Валидация ФИО (минимум 2 слова: Фамилия и Имя)
+    const nameParts = form.fullName.trim().split(/\s+/).filter(Boolean);
+    if (nameParts.length < 2) {
+      setError("Пожалуйста, введите полное ФИО кандидата.");
+      setBusy(false);
+      return;
+    }
+
+    // 2. Валидация телефона (начинается с +7 или 8, затем ровно 10 цифр)
+    const phoneRegex = /^(?:\+7|8)\d{10}$/;
+    const cleanPhone = (form.phone ?? "").trim();
+
+    if (!phoneRegex.test(cleanPhone)) {
+      setError("Пожалуйста, введите корректный номер телефона.");
+      setBusy(false);
+      return;
+    }
+
     const payload: SaveCandidate = {
       ...form,
+      fullName: form.fullName.trim(),
+      phone: cleanPhone,
       skills: skillsText.split(",").map((s) => s.trim()).filter(Boolean),
     };
+
     try {
       const saved = isEdit ? await candidatesApi.update(id!, payload) : await candidatesApi.create(payload);
       navigate(`/candidates/${saved.id}`);
@@ -75,8 +96,9 @@ export default function CandidateFormPage() {
               onChange={(e) => set("fullName", e.target.value)} />
           </div>
           <div className="grid-2">
-            <div className="field"><label>Телефон</label>
-              <input className="input" value={form.phone} onChange={(e) => set("phone", e.target.value)} /></div>
+            <div className="field"><label>Телефон *</label>
+              <input className="input" value={form.phone} required onChange={(e) => set("phone", e.target.value)} />
+            </div>
             <div className="field"><label>Город</label>
               <input className="input" value={form.city} onChange={(e) => set("city", e.target.value)} /></div>
           </div>
