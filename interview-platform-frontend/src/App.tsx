@@ -10,12 +10,16 @@ import VacanciesPage from "./pages/VacanciesPage";
 import CompetenciesPage from "./pages/CompetenciesPage";
 import UsersPage from "./pages/UsersPage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
 
 export default function App() {
   return (
     <Routes>
+      {/* Публичные маршруты */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/404" element={<NotFoundPage />} />
 
+      {/* Защищённые маршруты */}
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route index element={<Navigate to="/interviews" replace />} />
@@ -37,7 +41,8 @@ export default function App() {
         </Route>
       </Route>
 
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* 404 — должен быть последним маршрутом */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
