@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace InterviewPlatform.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class Initial : Migration
+    public partial class VacancyFieldsUpdate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -100,7 +100,14 @@ namespace InterviewPlatform.Api.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Level = table.Column<string>(type: "text", nullable: true),
                     Description = table.Column<string>(type: "text", nullable: true),
+                    SalaryFrom = table.Column<decimal>(type: "numeric", nullable: true),
+                    SalaryTo = table.Column<decimal>(type: "numeric", nullable: true),
+                    Experience = table.Column<string>(type: "text", nullable: true),
+                    Schedule = table.Column<string>(type: "text", nullable: true),
+                    WorkHours = table.Column<int>(type: "integer", nullable: true),
+                    WorkFormat = table.Column<string>(type: "text", nullable: true),
                     Status = table.Column<string>(type: "text", nullable: false),
                     IsArchived = table.Column<bool>(type: "boolean", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
