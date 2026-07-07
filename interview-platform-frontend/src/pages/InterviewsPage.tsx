@@ -1,18 +1,52 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { interviewsApi, candidatesApi, vacanciesApi } from "../api";
 import { apiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
-import type { Paged, InterviewListItem, CandidateListItem, Vacancy } from "../types";
+import type { Paged, InterviewListItem, CandidateListItem, Vacancy, InterviewRegistryFilters } from "../types";
 import { PageHeader, Spinner, EmptyState, ErrorState, StatusBadge, Pagination } from "../components/ui";
 import { DatePicker } from "../components/DatePicker";
 import { TimeSelect } from "../components/TimeSelect";
 import {
+  InterviewFilters, type InterviewFilterValues,
+} from "../components/InterviewFilters";
+import {
   combineDateAndTime, getBlockedTimesForDate, getScheduledTimesForDate, toLocalDateString,
 } from "../utils/interviewSchedule";
 
+function filtersFromParams(params: URLSearchParams): InterviewFilterValues {
+  return {
+    vacancy: params.get("vacancy") || "",
+    dateFrom: params.get("dateFrom") || "",
+    dateTo: params.get("dateTo") || "",
+    interviewerRole: (params.get("interviewer") || "") as InterviewFilterValues["interviewerRole"],
+    status: (params.get("status") || "") as InterviewFilterValues["status"],
+  };
+}
+
+function paramsFromFilters(filters: InterviewFilterValues): URLSearchParams {
+  const next = new URLSearchParams();
+  if (filters.vacancy) next.set("vacancy", filters.vacancy);
+  if (filters.dateFrom) next.set("dateFrom", filters.dateFrom);
+  if (filters.dateTo) next.set("dateTo", filters.dateTo);
+  if (filters.interviewerRole) next.set("interviewer", filters.interviewerRole);
+  if (filters.status) next.set("status", filters.status);
+  return next;
+}
+
+function toRegistryFilters(filters: InterviewFilterValues): InterviewRegistryFilters {
+  return {
+    vacancyTitle: filters.vacancy || undefined,
+    dateFrom: filters.dateFrom || undefined,
+    dateTo: filters.dateTo || undefined,
+    interviewerRole: filters.interviewerRole || undefined,
+    status: filters.status || undefined,
+  };
+}
+
 export default function InterviewsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { hasRole, userId } = useAuth();
   const canCreate = hasRole("Администратор", "Отдел кадров");
 
@@ -23,18 +57,37 @@ export default function InterviewsPage() {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [reload, setReload] = useState(0);
+  const [vacancies, setVacancies] = useState<Vacancy[]>([]);
+  const [filters, setFilters] = useState<InterviewFilterValues>(() => filtersFromParams(searchParams));
+
+  const registryFilters = useMemo(() => toRegistryFilters(filters), [filters]);
+
+  useEffect(() => {
+    vacanciesApi.list().then(setVacancies).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    setFilters(filtersFromParams(searchParams));
+  }, [searchParams]);
+
+  const applyFilters = useCallback((next: InterviewFilterValues) => {
+    setPage(1);
+    setFilters(next);
+    const params = paramsFromFilters(next);
+    setSearchParams(params, { replace: true });
+  }, [setSearchParams]);
 
   useEffect(() => {
     let active = true;
     setLoading(true); setError(null);
     const t = setTimeout(() => {
-      interviewsApi.registry(page, 20, search)
+      interviewsApi.registry(page, 20, search, undefined, undefined, registryFilters)
         .then((d) => active && setData(d))
         .catch((e) => active && setError(apiError(e)))
         .finally(() => active && setLoading(false));
     }, search ? 300 : 0);
     return () => { active = false; clearTimeout(t); };
-  }, [page, search, reload]);
+  }, [page, search, reload, registryFilters]);
 
   return (
     <>
@@ -51,8 +104,11 @@ export default function InterviewsPage() {
       )}
 
       <div className="toolbar">
-        <input className="input search" placeholder="Поиск по кандидату или вакансии"
-          value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} />
+        <div className="toolbar-search">
+          <input className="input search" placeholder="Поиск по кандидату или вакансии"
+            value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} />
+          <InterviewFilters filters={filters} vacancies={vacancies} onApply={applyFilters} />
+        </div>
       </div>
 
       <div className="panel table-wrap">

@@ -98,7 +98,38 @@ table.data tbody tr.clickable { cursor: pointer; }
 .textarea { min-height: 84px; resize: vertical; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
 .search { max-width: 320px; }
+.toolbar-search { display: flex; align-items: center; gap: 8px; }
 .field-hint { font-size: 12px; color: var(--muted); line-height: 1.4; }
+
+/* ---------- filters ---------- */
+.filter-wrap { position: relative; }
+.filter-btn { padding: 9px 10px; position: relative; }
+.filter-btn-active { border-color: var(--navy); background: #EFF4FA; }
+.filter-btn-active::after {
+  content: ""; position: absolute; top: 6px; right: 6px;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--navy);
+}
+.filter-popup {
+  position: absolute; z-index: 60; top: calc(100% + 6px); right: 100;
+  width: 300px; padding: 14px; background: #fff;
+  border: 1px solid var(--line-2); border-radius: var(--radius); box-shadow: var(--shadow);
+}
+.filter-popup .field { margin-bottom: 10px; }
+.filter-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.autocomplete { position: relative; }
+.autocomplete-list {
+  position: absolute; z-index: 70; top: calc(100% + 4px); left: 0; right: 0;
+  margin: 0; padding: 4px 0; list-style: none; background: #fff;
+  border: 1px solid var(--line-2); border-radius: 8px; box-shadow: var(--shadow);
+  max-height: 180px; overflow-y: auto;
+}
+.autocomplete-item {
+  display: block; width: 100%; text-align: left; border: none; background: transparent;
+  padding: 8px 11px; font-size: 13.5px; cursor: pointer; font-family: inherit; color: var(--ink);
+}
+.autocomplete-item:hover { background: #EFF4FA; }
+.calendar-hint { font-size: 11.5px; color: var(--muted); margin-bottom: 8px; line-height: 1.35; }
+.calendar-cell.in-range { background: #E8EEF6; border-radius: 0; }
 
 /* ---------- date & time pickers ---------- */
 .picker { position: relative; }

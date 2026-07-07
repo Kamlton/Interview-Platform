@@ -9,11 +9,34 @@ namespace InterviewPlatform.Api.Features.Interviews;
 public class InterviewService(AppDbContext db, IAuditService audit)
 {
     public async Task<PagedResult<InterviewListItem>> GetRegistryAsync(
-        PageQuery q, Guid? candidateId, Guid? vacancyId, CancellationToken ct)
+        PageQuery q, Guid? candidateId, Guid? vacancyId, string? vacancyTitle,
+        string? dateFrom, string? dateTo, string? interviewerRole, InterviewStatus? status,
+        CancellationToken ct)
     {
         var query = db.Interviews.AsNoTracking().Where(i => !i.IsArchived);
         if (candidateId is { } cid) query = query.Where(i => i.CandidateId == cid);
         if (vacancyId is { } vid) query = query.Where(i => i.VacancyId == vid);
+        if (!string.IsNullOrWhiteSpace(vacancyTitle))
+        {
+            var vt = vacancyTitle.Trim();
+            query = query.Where(i => EF.Functions.ILike(i.Vacancy.Title, $"%{vt}%"));
+        }
+        if (DateOnly.TryParse(dateFrom, out var df))
+        {
+            var from = new DateTimeOffset(df.ToDateTime(TimeOnly.MinValue));
+            query = query.Where(i => i.ScheduledAt >= from);
+        }
+        if (DateOnly.TryParse(dateTo, out var dt))
+        {
+            var toExclusive = new DateTimeOffset(dt.AddDays(1).ToDateTime(TimeOnly.MinValue));
+            query = query.Where(i => i.ScheduledAt < toExclusive);
+        }
+        if (!string.IsNullOrWhiteSpace(interviewerRole))
+        {
+            var role = interviewerRole.Trim();
+            query = query.Where(i => i.Interviewer.Role.Name == role);
+        }
+        if (status is { } st) query = query.Where(i => i.Status == st);
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
             var s = q.Search.Trim();

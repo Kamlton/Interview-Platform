@@ -2,6 +2,14 @@ export type Role = "Администратор" | "Отдел кадров" | "�
 
 export type CandidateStatus = "New" | "InProgress" | "Hired" | "Rejected";
 export type InterviewStatus = "Planned" | "InProgress" | "Completed" | "Cancelled";
+
+export interface InterviewRegistryFilters {
+  vacancyTitle?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  interviewerRole?: Role | "";
+  status?: InterviewStatus | "";
+}
 export type DecisionType = "Offer" | "Reject" | "Hold";
 export type DocumentType = "OfferLetter" | "RejectionLetter" | "InterviewProtocol";
 

@@ -2,7 +2,7 @@ import { api } from "./client";
 import type {
   AuthResponse, Paged, CandidateListItem, CandidateDetails, SaveCandidate,
   Vacancy, Competency, Matrix, InterviewListItem, InterviewDetails, Protocol,
-  UserDto, DecisionType, DocumentType, AuditLogEntry,
+  UserDto, DecisionType, DocumentType, AuditLogEntry, InterviewRegistryFilters,
 } from "../types";
 
 export const authApi = {
@@ -47,9 +47,23 @@ export const matricesApi = {
 };
 
 export const interviewsApi = {
-  registry: (page: number, size: number, search: string, candidateId?: string, vacancyId?: string) =>
-    api.get<Paged<InterviewListItem>>("/api/interviews",
-      { params: { page, size, search: search || undefined, candidateId, vacancyId } }).then((r) => r.data),
+  registry: (
+    page: number, size: number, search: string,
+    candidateId?: string, vacancyId?: string, filters?: InterviewRegistryFilters,
+  ) =>
+    api.get<Paged<InterviewListItem>>("/api/interviews", {
+      params: {
+        page, size,
+        search: search || undefined,
+        candidateId,
+        vacancyId,
+        vacancyTitle: filters?.vacancyTitle || undefined,
+        dateFrom: filters?.dateFrom || undefined,
+        dateTo: filters?.dateTo || undefined,
+        interviewerRole: filters?.interviewerRole || undefined,
+        status: filters?.status || undefined,
+      },
+    }).then((r) => r.data),
   get: (id: string) => api.get<InterviewDetails>(`/api/interviews/${id}`).then((r) => r.data),
   create: (body: {
     candidateId: string; vacancyId: string; interviewerUserId: string;
