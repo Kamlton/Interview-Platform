@@ -103,36 +103,65 @@ export default function VacanciesPage() {
 
           <div className="field">
             <label>Компетенции</label>
-            {competencies.map((c, i) => (
-              <div key={i} className="field-row" style={{ marginBottom: 8 }}>
-                <input
-                  className="input"
-                  placeholder="Название"
-                  value={c.name}
-                  onChange={(e) => updateCompetency(i, "name", e.target.value)}
-                />
-                <input
-                  className="input"
-                  placeholder="Категория"
-                  value={c.category}
-                  onChange={(e) => updateCompetency(i, "category", e.target.value)}
-                />
+            {competencies.length === 0 && (
+              <div>
                 <button
                   type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => removeCompetency(i)}
+                  className="btn btn-sm"
+                  onClick={addCompetency}
                 >
-                  Удалить
+                  + Добавить компетенцию
                 </button>
               </div>
-            ))}
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={addCompetency}
-            >
-              + Добавить компетенцию
-            </button>
+            )}
+
+            {competencies.map((c, i) => {
+              const isLast = i === competencies.length - 1;
+              return (
+                <div 
+                  key={i} 
+                  className={isLast ? "competency-field-row-with-add" : "competency-field-row-plain"}
+                >
+                  <input
+                    className="input"
+                    placeholder="Название компетенции"
+                    value={c.name}
+                    required
+                    onChange={(e) => updateCompetency(i, "name", e.target.value)}
+                  />
+                  <select
+                    className="select"
+                    value={c.category}
+                    required
+                    onChange={(e) => updateCompetency(i, "category", e.target.value)}
+                  >
+                    <option value="" disabled hidden>Выберите категорию</option>
+                    <option value="Hard Skills">Hard Skills</option>
+                    <option value="Soft Skills">Soft Skills</option>
+                    <option value="Tech Skills">Tech Skills</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => removeCompetency(i)}
+                  >
+                    Удалить
+                  </button>
+
+                  {isLast && (
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={addCompetency}
+                    >
+                      + Добавить
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <div className="btn-row">
             <button type="button" className="btn btn-ghost" onClick={() => setIsFormOpen(false)}>

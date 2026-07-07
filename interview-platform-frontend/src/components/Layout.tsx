@@ -40,9 +40,11 @@ export default function Layout() {
             <div className="user-name">{fullName}</div>
             <div className="user-role">{role}</div>
           </div>
-          <div className="foot-actions">
-            <NavLink to="/change-password" className="link-sm">Сменить пароль</NavLink>
-            <button className="btn btn-ghost btn-sm" onClick={() => { logout(); navigate("/login"); }}>
+          <div className="foot-actions-row">
+            <NavLink to="/change-password" className="btn btn-ghost btn-sm btn-foot">
+              Сменить пароль
+            </NavLink>
+            <button className="btn btn-ghost btn-sm btn-foot" onClick={() => { logout(); navigate("/login"); }}>
               Выйти
             </button>
           </div>

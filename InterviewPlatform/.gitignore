@@ -5,3 +5,4 @@ obj/
 .idea/
 appsettings.*.local.json
 .DS_Store
+*@*.json
