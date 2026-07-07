@@ -269,3 +269,62 @@ table.data tbody tr.clickable { cursor: pointer; }
   letter-spacing: 0.5px;
   margin-top: 2px;
 }
+
+
+/* Контейнер для уведомлений */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Сама плашка уведомления */
+.toast-item {
+  pointer-events: auto;
+  background: var(--panel-bg, #ffffff);
+  color: var(--text-main, #333333);
+  border: 1px solid var(--border, #e2e8f0);
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 250px;
+  max-width: 400px;
+  /* Запускаем анимацию появления */
+  animation: toastFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Класс, который плавно уводит плашку обратно направо */
+.toast-item.leaving {
+  animation: toastFadeOut 0.5s cubic-bezier(0.7, 0, 0.84, 0) forwards;
+}
+
+/* Анимация появления (выезжает справа налево) */
+@keyframes toastFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Анимация исчезновения (уезжает обратно направо) */
+@keyframes toastFadeOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+}

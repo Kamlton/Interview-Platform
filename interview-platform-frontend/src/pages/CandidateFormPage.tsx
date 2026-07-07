@@ -4,6 +4,7 @@ import { candidatesApi, interviewsApi } from "../api";
 import { apiError } from "../api/client";
 import type { SaveCandidate, InterviewListItem } from "../types";
 import { PageHeader, Spinner, ErrorState, StatusBadge } from "../components/ui";
+import { useToast } from "../components/ToastContext";
 
 const EMPTY: SaveCandidate = { fullName: "", phone: "", city: "", education: "", previousWorkplace: "", skills: [] };
 
@@ -11,12 +12,17 @@ export default function CandidateFormPage() {
   const { id } = useParams();
   const isEdit = !!id;
   const navigate = useNavigate();
+  const { showToast } = useToast();
+
   const [form, setForm] = useState<SaveCandidate>(EMPTY);
   const [skillsText, setSkillsText] = useState("");
   const [interviews, setInterviews] = useState<InterviewListItem[]>([]);
   const [loading, setLoading] = useState(isEdit);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // НОВЫЙ СТЕЙТ: если это редактирование, изначально включаем режим «только чтение»
+  const [isReadOnly, setIsReadOnly] = useState(isEdit);
 
   useEffect(() => {
     if (!id) return;
@@ -43,7 +49,7 @@ export default function CandidateFormPage() {
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setBusy(true); setError(null);
-    // 1. Валидация ФИО (минимум 2 слова: Фамилия и Имя)
+
     const nameParts = form.fullName.trim().split(/\s+/).filter(Boolean);
     if (nameParts.length < 2) {
       setError("Пожалуйста, введите полное ФИО кандидата.");
@@ -51,7 +57,6 @@ export default function CandidateFormPage() {
       return;
     }
 
-    // 2. Валидация телефона (начинается с +7 или 8, затем ровно 10 цифр)
     const phoneRegex = /^(?:\+7|8)\d{10}$/;
     const cleanPhone = (form.phone ?? "").trim();
 
@@ -69,8 +74,17 @@ export default function CandidateFormPage() {
     };
 
     try {
-      const saved = isEdit ? await candidatesApi.update(id!, payload) : await candidatesApi.create(payload);
-      navigate(`/candidates/${saved.id}`);
+      const saved = isEdit 
+        ? await candidatesApi.update(id!, payload) 
+        : await candidatesApi.create(payload);
+      
+      if (isEdit) {
+        showToast(`Данные кандидата ${payload.fullName} обновлены.`);
+        setIsReadOnly(true); // После успешного сохранения возвращаем режим чтения
+      } else {
+        showToast(`Новый кандидат "${payload.fullName}" добавлен.`);
+        navigate(`/candidates/${saved.id}`); // Перекидываем на детали созданного
+      }
     } catch (err) {
       setError(apiError(err));
     } finally {
@@ -82,8 +96,18 @@ export default function CandidateFormPage() {
 
   return (
     <>
-      <PageHeader title={isEdit ? "Карточка кандидата" : "Новый кандидат"}>
-        <button className="btn btn-ghost" onClick={() => navigate("/candidates")}>К реестру</button>
+      <PageHeader title={isEdit ? (isReadOnly ? "Информация о кандидате" : "Редактирование кандидата") : "Новый кандидат"}>
+        <div style={{ display: "flex", gap: "8px" }}>
+          {/* Кнопка Редактировать / Отмена */}
+          {isEdit && (
+            isReadOnly ? (
+              <button className="btn" onClick={() => setIsReadOnly(false)}>Редактировать</button>
+            ) : (
+              <button className="btn btn-ghost" disabled={busy} onClick={() => setIsReadOnly(true)}>Отмена</button>
+            )
+          )}
+          <button className="btn btn-ghost" onClick={() => navigate("/candidates")}>Назад</button>
+        </div>
       </PageHeader>
 
       {error && <ErrorState message={error} />}
@@ -92,27 +116,31 @@ export default function CandidateFormPage() {
         <form className="card" onSubmit={onSubmit}>
           <div className="field">
             <label>ФИО *</label>
-            <input className="input" value={form.fullName} required
+            <input className="input" value={form.fullName} required disabled={isReadOnly}
               onChange={(e) => set("fullName", e.target.value)} />
           </div>
           <div className="grid-2">
             <div className="field"><label>Телефон *</label>
-              <input className="input" value={form.phone} required onChange={(e) => set("phone", e.target.value)} />
+              <input className="input" value={form.phone} required disabled={isReadOnly} onChange={(e) => set("phone", e.target.value)} />
             </div>
             <div className="field"><label>Город</label>
-              <input className="input" value={form.city} onChange={(e) => set("city", e.target.value)} /></div>
+              <input className="input" value={form.city} disabled={isReadOnly} onChange={(e) => set("city", e.target.value)} /></div>
           </div>
           <div className="field"><label>Образование</label>
-            <textarea className="textarea" value={form.education} onChange={(e) => set("education", e.target.value)} /></div>
+            <textarea className="textarea" value={form.education} disabled={isReadOnly} onChange={(e) => set("education", e.target.value)} /></div>
           <div className="field"><label>Предыдущее место работы</label>
-            <textarea className="textarea" value={form.previousWorkplace}
+            <textarea className="textarea" value={form.previousWorkplace} disabled={isReadOnly}
               onChange={(e) => set("previousWorkplace", e.target.value)} /></div>
           <div className="field"><label>Навыки (через запятую)</label>
-            <input className="input" value={skillsText} placeholder="C#, SQL, EF Core"
+            <input className="input" value={skillsText} placeholder="C#, SQL, EF Core" disabled={isReadOnly}
               onChange={(e) => setSkillsText(e.target.value)} /></div>
-          <div className="btn-row">
-            <button className="btn" type="submit" disabled={busy}>{busy ? "Сохраняем…" : "Сохранить"}</button>
-          </div>
+          
+          {/* Кнопка "Сохранить" показывается, только если мы НЕ в режиме чтения */}
+          {!isReadOnly && (
+            <div className="btn-row">
+              <button className="btn" type="submit" disabled={busy}>{busy ? "Сохраняем…" : "Сохранить"}</button>
+            </div>
+          )}
         </form>
 
         <div>

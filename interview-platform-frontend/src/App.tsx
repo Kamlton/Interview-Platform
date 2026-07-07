@@ -12,10 +12,12 @@ import AuditPage from "./pages/AuditPage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
 import VacancyPage from "./pages/VacancyPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
+import { ToastProvider } from "./components/ToastContext";
 
 export default function App() {
   return (
-    <Routes>
+    <ToastProvider>
+      <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/404" element={<NotFoundPage />} />
 
@@ -42,5 +44,7 @@ export default function App() {
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
+    </ToastProvider>
+    
   );
 }
