@@ -3,12 +3,13 @@ import { useState, useEffect } from "react"; // <-- ДОБАВЬТЕ
 import { useAuth } from "../auth/AuthContext";
 import AuditTracker from "../audit/AuditTracker";
 import type { Role } from "../types";
+import logoImg from "../img/logotype.png";
 
 interface NavItem { to: string; label: string; roles?: Role[]; }
 
 const NAV: NavItem[] = [
-  { to: "/candidates", label: "Кандидаты", roles: ["Администратор", "Отдел кадров"] },
   { to: "/interviews", label: "Собеседования" },
+  { to: "/candidates", label: "Кандидаты", roles: ["Администратор", "Отдел кадров"] },
   { to: "/vacancies", label: "Вакансии", roles: ["Администратор", "Отдел кадров"] },
   { to: "/users", label: "Пользователи", roles: ["Администратор"] },
   { to: "/audit", label: "Аудит", roles: ["Администратор"] },
@@ -26,21 +27,12 @@ function CurrentDateTime() {
 
   return (
     <div className="current-datetime">
-      <div className="datetime-date">
-        {dateTime.toLocaleDateString("ru-RU", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        })}
-      </div>
-      <div className="datetime-time">
-        {dateTime.toLocaleTimeString("ru-RU", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        })}
-      </div>
-    </div>
+  <div className="datetime-date">
+    {dateTime.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric" })}
+    {"\u00a0\u00a0|\u00a0\u00a0"} 
+    {dateTime.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })}
+  </div>
+</div>
   );
 }
 
@@ -53,11 +45,14 @@ export default function Layout() {
     <div className="app">
       <AuditTracker />
       <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark">ИС</span>
-          <span className="brand-text">Собеседования</span>
+        {/* ЗАМЕНЕННЫЙ БЛОК БРЕНДА НА КАРТИНКУ */}
+        <div className="brand" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <img 
+            src={logoImg} 
+            alt="Логотип ИС Собеседования" 
+            style={{ maxWidth: "100%", height: "auto", display: "block" }} 
+          />
         </div>
-        {/* <-- ДОБАВЛЯЕМ ДАТУ И ВРЕМЯ ПОД БРЕНДОМ --> */}
         <CurrentDateTime />
         <nav className="nav">
           {items.map((i) => (
@@ -68,6 +63,7 @@ export default function Layout() {
           ))}
         </nav>
         <div className="sidebar-foot">
+          
           <div className="user">
             <div className="user-name">{fullName}</div>
             <div className="user-role">{role}</div>
