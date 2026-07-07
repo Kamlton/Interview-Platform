@@ -526,8 +526,23 @@ namespace InterviewPlatform.Api.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
+                    b.Property<string>("Experience")
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsArchived")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("Level")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("SalaryFrom")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal?>("SalaryTo")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("Schedule")
+                        .HasColumnType("text");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -537,6 +552,12 @@ namespace InterviewPlatform.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<string>("WorkFormat")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("WorkHours")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

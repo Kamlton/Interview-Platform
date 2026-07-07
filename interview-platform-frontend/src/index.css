@@ -211,13 +211,10 @@ table.data tbody tr.clickable { cursor: pointer; }
 
 /* ---------- footer actions (смена пароля / выход) ---------- */
 .foot-actions-row { display: flex; gap: 8px; width: 100%; }
-
-/* Специфичный стиль для кнопок в футере, чтобы они растягивались и гармонично смотрелись на темном фоне */
 .btn-foot { flex: 1; white-space: nowrap; background: rgba(255, 255, 255, 0.05); color: #DCE6F1; border-color: rgba(255, 255, 255, 0.15); }
-
 .btn-foot:hover { background: rgba(255, 255, 255, 0.15); color: #fff; }
-
 @media (max-width: 860px) { .sidebar-foot { flex-direction: row; align-items: center; width: auto; } .user { text-align: left; width: auto; } .foot-actions-row { width: auto; } }
+
 
 /* ---------- строки компетенций в вакансиях ---------- */
 
@@ -248,4 +245,27 @@ table.data tbody tr.clickable { cursor: pointer; }
   padding-top: 0;
   padding-bottom: 0;
   height: 100%; /* Занимает всю высоту строки, как и input/select */
+}
+
+.current-datetime {
+  padding: 10px 16px;
+  margin: 6px 0 12px 0;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.datetime-date {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.datetime-time {
+  font-size: 18px;
+  font-weight: 600;
+  color: #e2e8f0;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
 }
