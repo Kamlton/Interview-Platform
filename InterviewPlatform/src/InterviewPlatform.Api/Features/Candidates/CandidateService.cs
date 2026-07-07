@@ -1,5 +1,6 @@
 using InterviewPlatform.Api.Common;
 using InterviewPlatform.Api.Domain.Entities;
+using InterviewPlatform.Api.Domain.Enums;
 using InterviewPlatform.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,9 +9,17 @@ namespace InterviewPlatform.Api.Features.Candidates;
 public class CandidateService(AppDbContext db, ICurrentUser currentUser, IAuditService audit)
 {
     public async Task<PagedResult<CandidateListItem>> GetRegistryAsync(
-        PageQuery q, bool includeArchived, CancellationToken ct)
+        PageQuery q, bool includeArchived, string? city, CandidateStatus? status,
+        string? sortDate, string? sortName, CancellationToken ct)
     {
         var query = db.Candidates.AsNoTracking().Where(c => includeArchived || !c.IsArchived);
+
+        if (!string.IsNullOrWhiteSpace(city))
+        {
+            var c = city.Trim();
+            query = query.Where(x => x.City != null && EF.Functions.ILike(x.City, $"%{c}%"));
+        }
+        if (status is { } st) query = query.Where(x => x.Status == st);
 
         if (!string.IsNullOrWhiteSpace(q.Search))
         {
@@ -20,7 +29,21 @@ public class CandidateService(AppDbContext db, ICurrentUser currentUser, IAuditS
         }
 
         var total = await query.CountAsync(ct);
-        var items = await query.OrderByDescending(c => c.CreatedAt)
+
+        IOrderedQueryable<Candidate> ordered;
+        if (string.Equals(sortName, "asc", StringComparison.OrdinalIgnoreCase))
+            ordered = query.OrderBy(c => c.FullName);
+        else if (string.Equals(sortName, "desc", StringComparison.OrdinalIgnoreCase))
+            ordered = query.OrderByDescending(c => c.FullName);
+        else
+        {
+            var newestFirst = !string.Equals(sortDate, "oldest", StringComparison.OrdinalIgnoreCase);
+            ordered = newestFirst
+                ? query.OrderByDescending(c => c.CreatedAt)
+                : query.OrderBy(c => c.CreatedAt);
+        }
+
+        var items = await ordered
             .Skip(q.Skip).Take(q.Size)
             .Select(c => new CandidateListItem(c.Id, c.FullName, c.City, c.Status, c.IsArchived))
             .ToListAsync(ct);

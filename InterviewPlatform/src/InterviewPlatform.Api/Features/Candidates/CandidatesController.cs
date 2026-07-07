@@ -1,5 +1,6 @@
 using InterviewPlatform.Api.Common;
 using InterviewPlatform.Api.Domain.Constants;
+using InterviewPlatform.Api.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -12,8 +13,11 @@ public class CandidatesController(CandidateService service) : ControllerBase
 {
     [HttpGet]
     public Task<PagedResult<CandidateListItem>> Registry(
-        [FromQuery] PageQuery query, [FromQuery] bool includeArchived = false, CancellationToken ct = default)
-        => service.GetRegistryAsync(query, includeArchived, ct);
+        [FromQuery] PageQuery query, [FromQuery] bool includeArchived = false,
+        [FromQuery] string? city = null, [FromQuery] CandidateStatus? status = null,
+        [FromQuery] string? sortDate = null, [FromQuery] string? sortName = null,
+        CancellationToken ct = default)
+        => service.GetRegistryAsync(query, includeArchived, city, status, sortDate, sortName, ct);
 
     [HttpGet("{id:guid}")]
     public Task<CandidateDetails> Get(Guid id, CancellationToken ct) => service.GetAsync(id, ct);

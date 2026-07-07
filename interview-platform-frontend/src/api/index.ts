@@ -3,6 +3,7 @@ import type {
   AuthResponse, Paged, CandidateListItem, CandidateDetails, SaveCandidate,
   Vacancy, Competency, Matrix, InterviewListItem, InterviewDetails, Protocol,
   UserDto, DecisionType, DocumentType, AuditLogEntry, InterviewRegistryFilters,
+  CandidateRegistryFilters,
 } from "../types";
 
 export const authApi = {
@@ -14,9 +15,21 @@ export const authApi = {
 };
 
 export const candidatesApi = {
-  registry: (page: number, size: number, search: string, includeArchived: boolean) =>
-    api.get<Paged<CandidateListItem>>("/api/candidates",
-      { params: { page, size, search: search || undefined, includeArchived } }).then((r) => r.data),
+  registry: (
+    page: number, size: number, search: string, includeArchived: boolean,
+    filters?: CandidateRegistryFilters,
+  ) =>
+    api.get<Paged<CandidateListItem>>("/api/candidates", {
+      params: {
+        page, size,
+        search: search || undefined,
+        includeArchived,
+        city: filters?.city || undefined,
+        status: filters?.status || undefined,
+        sortDate: filters?.sortDate || undefined,
+        sortName: filters?.sortName || undefined,
+      },
+    }).then((r) => r.data),
   get: (id: string) => api.get<CandidateDetails>(`/api/candidates/${id}`).then((r) => r.data),
   create: (body: SaveCandidate) => api.post<CandidateDetails>("/api/candidates", body).then((r) => r.data),
   update: (id: string, body: SaveCandidate) =>

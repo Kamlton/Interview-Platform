@@ -1,6 +1,13 @@
 export type Role = "Администратор" | "Отдел кадров" | "Решала";
 
 export type CandidateStatus = "New" | "InProgress" | "Hired" | "Rejected";
+
+export interface CandidateRegistryFilters {
+  city?: string;
+  status?: CandidateStatus | "";
+  sortDate?: "newest" | "oldest";
+  sortName?: "" | "asc" | "desc";
+}
 export type InterviewStatus = "Planned" | "InProgress" | "Completed" | "Cancelled";
 
 export interface InterviewRegistryFilters {
