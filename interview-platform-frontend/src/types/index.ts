@@ -54,7 +54,14 @@ export interface SaveCandidate {
 export interface Vacancy {
   id: string;
   title: string;
+  level?: string;
   description?: string | null;
+  salaryFrom?: number;
+  salaryTo?: number;
+  experience?: string;
+  schedule?: string;
+  workHours?: number;
+  workFormat?: string;
   status: string;
   isArchived: boolean;
 }

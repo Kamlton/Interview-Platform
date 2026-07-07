@@ -9,7 +9,6 @@ const NAV: NavItem[] = [
   { to: "/candidates", label: "Кандидаты", roles: ["Администратор", "Отдел кадров"] },
   { to: "/interviews", label: "Собеседования" },
   { to: "/vacancies", label: "Вакансии", roles: ["Администратор", "Отдел кадров"] },
-  { to: "/competencies", label: "Компетенции", roles: ["Администратор", "Отдел кадров"] },
   { to: "/users", label: "Пользователи", roles: ["Администратор"] },
   { to: "/audit", label: "Аудит", roles: ["Администратор"] },
 ];

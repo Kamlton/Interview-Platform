@@ -1,7 +1,7 @@
 import { api } from "./client";
 import type {
   AuthResponse, Paged, CandidateListItem, CandidateDetails, SaveCandidate,
-  Vacancy, Competency, Matrix, InterviewListItem, InterviewDetails, Protocol,
+  Vacancy, Matrix, InterviewListItem, InterviewDetails, Protocol,
   UserDto, DecisionType, DocumentType, AuditLogEntry,
 } from "../types";
 
@@ -28,18 +28,15 @@ export const candidatesApi = {
 export const vacanciesApi = {
   list: (includeArchived = false) =>
   api.get<Vacancy[]>("/api/vacancies", { params: { includeArchived } }).then((r) => r.data),
-  create: (body: {title: string; description?: string; competencies?: any[] }) =>
+  create: (body: {title: string; level?: string; description?: string; salaryFrom?: number; 
+    salaryTo?: number; experience?: string; schedule?: string; workHours?: number; 
+    workFormat?: string;competencies?: any[] }) =>
     api.post<Vacancy>("/api/vacancies", body).then((r) => r.data),
   getCompetencies: (vacancyId: string) => 
     api.get<any[]>(`/api/vacancies/${vacancyId}/competencies`).then(r => r.data),
+  update: (id: string, body: any) =>
+    api.put<Vacancy>(`/api/vacancies/${id}`, body).then((r) => r.data),
 };
-
-export const competenciesApi = {
-  list: () => api.get<Competency[]>("/api/competencies").then((r) => r.data),
-  create: (name: string, category?: string, description?: string) =>
-    api.post<Competency>("/api/competencies", { name, category, description }).then((r) => r.data),
-};
-
 export const matricesApi = {
   get: (id: string) => api.get<Matrix>(`/api/matrices/${id}`).then((r) => r.data),
   create: (title: string, items: { competencyId: string; weight: number }[], vacancyId?: string) =>

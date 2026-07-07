@@ -1,18 +1,32 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { vacanciesApi } from "../api";
 import { apiError } from "../api/client";
 import type { Vacancy } from "../types";
-import { PageHeader, Spinner, EmptyState, ErrorState, StatusBadge } from "../components/ui";
+import { PageHeader, Spinner, EmptyState, ErrorState } from "../components/ui";
+
+const LEVELS = ["Junior", "Middle", "Senior"];
+const EXPERIENCE_OPTIONS = ["0-1 года", "1-3 года", "3-5 лет", "5+ лет"];
+const WORK_HOURS_OPTIONS = [4, 6, 8, 10, 12];
 
 export default function VacanciesPage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState<Vacancy[] | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [competencies, setCompetencies] = useState<any[]>([]);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
+
+  const [title, setTitle] = useState("");
+  const [level, setLevel] = useState("");
+  const [description, setDescription] = useState("");
+  const [salaryFrom, setSalaryFrom] = useState("");
+  const [salaryTo, setSalaryTo] = useState("");
+  const [experience, setExperience] = useState("");
+  const [schedule, setSchedule] = useState("");
+  const [workHours, setWorkHours] = useState<number | "">("");
+  const [workFormat, setWorkFormat] = useState("");
+  const [competencies, setCompetencies] = useState<any[]>([]);
 
   const filteredItems = items?.filter((v) => {
     if (!search.trim()) return true;
@@ -32,8 +46,15 @@ export default function VacanciesPage() {
     setError(null);
     try { 
       const payload = { 
-        title, 
-        description, 
+        title,
+        level: level || undefined,
+        description,
+        salaryFrom: salaryFrom ? Number(salaryFrom) : undefined,
+        salaryTo: salaryTo ? Number(salaryTo) : undefined,
+        experience: experience || undefined,
+        schedule: schedule || undefined,
+        workHours: workHours || undefined,
+        workFormat: workFormat || undefined,
         competencies: competencies.map(c => ({ 
           name: c.name, 
           category: c.category || "",
@@ -44,7 +65,14 @@ export default function VacanciesPage() {
       await vacanciesApi.create(payload); 
       setCompetencies([]);
       setTitle("");
+      setLevel("");
       setDescription("");
+      setSalaryFrom("");
+      setSalaryTo("");
+      setExperience("");
+      setSchedule("");
+      setWorkHours("");
+      setWorkFormat("");
       setIsFormOpen(false);
       await load();
     } 
@@ -73,80 +101,232 @@ export default function VacanciesPage() {
   return (
     <>
       <PageHeader title="Вакансии">
-        <button className="btn" onClick={() => setIsFormOpen(true)}>
-        Новая вакансия
-      </button>
-    </PageHeader>
-    {isFormOpen && (
-      <div className="card" style={{ marginBottom: "var(--gap)" }}>
-        <h2>Новая вакансия</h2>
-        {error && <ErrorState message={error} />}
-        <form onSubmit={add}>
-          <div className="field">
-            <label>Название *</label>
-            <input
-              className="input"
-              value={title}
-              required
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
+        {isFormOpen ? (
+          <button className="btn btn-ghost" onClick={() => setIsFormOpen(false)}>
+            К реестру
+          </button>
+        ) : (
+          <button className="btn" onClick={() => setIsFormOpen(true)}>
+            Новая вакансия
+          </button>
+        )}
+      </PageHeader>
 
-          <div className="field">
-            <label>Описание</label>
-            <textarea
-              className="textarea"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
+      {isFormOpen && (
+        <div className="card" style={{ marginBottom: "var(--gap)" }}>
+          <h2>Новая вакансия</h2>
+          {error && <ErrorState message={error} />}
+          <form onSubmit={add}>
+            {/* Название */}
+            <div className="field">
+              <label>Название *</label>
+              <input
+                className="input"
+                value={title}
+                required
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
 
-          <div className="field">
-            <label>Компетенции</label>
-            {competencies.map((c, i) => (
-              <div key={i} className="field-row" style={{ marginBottom: 8 }}>
-                <input
-                  className="input"
-                  placeholder="Название"
-                  value={c.name}
-                  onChange={(e) => updateCompetency(i, "name", e.target.value)}
-                />
-                <input
-                  className="input"
-                  placeholder="Категория"
-                  value={c.category}
-                  onChange={(e) => updateCompetency(i, "category", e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => removeCompetency(i)}
-                >
-                  Удалить
-                </button>
+            <div className="field">
+              <label>Уровень</label>
+              <div className="btn-row" style={{ flexWrap: "wrap", gap: 8 }}>
+                {LEVELS.map((l) => (
+                  <button
+                    key={l}
+                    type="button"
+                    className={`btn ${level === l ? "btn-primary" : "btn-ghost"}`}
+                    onClick={() => setLevel(level === l ? "" : l)}
+                    style={{ fontSize: 14 }}
+                  >
+                    {l}
+                  </button>
+                ))}
               </div>
-            ))}
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={addCompetency}
-            >
-              + Добавить компетенцию
-            </button>
-          </div>
-          <div className="btn-row">
-            <button type="button" className="btn btn-ghost" onClick={() => setIsFormOpen(false)}>
-              Отмена
-            </button>
-            <button className="btn" type="submit" disabled={busy}>
-              {busy ? "Сохраняем…" : "Создать"}
-            </button>
-          </div>
-        </form>
-      </div>
-    )}
+            </div>
 
-        <div style={{ marginBottom: "var(--gap)" }}>
+            <div className="field">
+              <label>Описание</label>
+              <textarea
+                className="textarea"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="field">
+              <label>Заработная плата</label>
+              <div style={{ 
+                display: "flex", 
+                alignItems: "center", 
+                gap: "12px",
+                flexWrap: "wrap"
+              }}>
+                <span style={{ fontSize: 14, color: "var(--text-muted)" }}>от</span>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="0"
+                  value={salaryFrom}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/[^0-9]/g, "");
+                    setSalaryFrom(cleaned);
+                  }}
+                  onBlur={() => {
+                    if (salaryFrom) {
+                      const num = Number(salaryFrom.replace(/[^0-9]/g, ""));
+                      if (num) setSalaryFrom(new Intl.NumberFormat("ru-RU").format(num));
+                    }
+                  }}
+                  onFocus={() => {
+                    const num = Number(salaryFrom.replace(/[^0-9]/g, ""));
+                    if (num) setSalaryFrom(num.toString());
+                  }}
+                  style={{ width: "140px" }}
+                />
+                <span style={{ fontSize: 14, color: "var(--text-muted)" }}>до</span>
+                <input
+                  className="input"
+                  type="text"
+                  placeholder="0"
+                  value={salaryTo}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.replace(/[^0-9]/g, "");
+                    setSalaryTo(cleaned);
+                  }}
+                  onBlur={() => {
+                    if (salaryTo) {
+                      const num = Number(salaryTo.replace(/[^0-9]/g, ""));
+                      if (num) setSalaryTo(new Intl.NumberFormat("ru-RU").format(num));
+                    }
+                  }}
+                  onFocus={() => {
+                    const num = Number(salaryTo.replace(/[^0-9]/g, ""));
+                    if (num) setSalaryTo(num.toString());
+                  }}
+                  style={{ width: "140px" }}
+                />
+              </div>
+            </div>
+
+            <div className="field">
+              <label>Опыт работы</label>
+              <div className="btn-row" style={{ flexWrap: "wrap", gap: 8 }}>
+                {EXPERIENCE_OPTIONS.map((exp) => (
+                  <button
+                    key={exp}
+                    type="button"
+                    className={`btn ${experience === exp ? "btn-primary" : "btn-ghost"}`}
+                    onClick={() => setExperience(experience === exp ? "" : exp)}
+                    style={{ fontSize: 14 }}
+                  >
+                    {exp}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="field">
+              <label>График работы</label>
+              <input
+                className="input"
+                placeholder="например: 5/2, 2/2, гибкий"
+                value={schedule}
+                onChange={(e) => setSchedule(e.target.value)}
+              />
+            </div>
+
+            <div className="field">
+              <label>Рабочие часы в день</label>
+              <div className="btn-row" style={{ flexWrap: "wrap", gap: 8 }}>
+                {WORK_HOURS_OPTIONS.map((h) => (
+                  <button
+                    key={h}
+                    type="button"
+                    className={`btn ${workHours === h ? "btn-primary" : "btn-ghost"}`}
+                    onClick={() => setWorkHours(workHours === h ? "" : h)}
+                    style={{ fontSize: 14 }}
+                  >
+                    {h} ч.
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="field">
+              <label>Формат работы</label>
+              <input
+                className="input"
+                placeholder="удалённо, гибрид, офис"
+                value={workFormat}
+                onChange={(e) => setWorkFormat(e.target.value)}
+              />
+            </div>
+
+            <div className="field">
+              <label>Компетенции</label>
+              {competencies.map((c, i) => (
+                <div key={i} className="field-row" style={{ marginBottom: 8 }}>
+                  <input
+                    className="input"
+                    placeholder="Название"
+                    value={c.name}
+                    onChange={(e) => updateCompetency(i, "name", e.target.value)}
+                  />
+                  <input
+                    className="input"
+                    placeholder="Категория"
+                    value={c.category || ""}
+                    onChange={(e) => updateCompetency(i, "category", e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-sm"
+                    onClick={() => removeCompetency(i)}
+                  >
+                    Удалить
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="btn btn-sm"
+                onClick={addCompetency}
+              >
+                + Добавить компетенцию
+              </button>
+            </div>
+
+            <div className="btn-row">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => {
+                  setIsFormOpen(false);
+                  setError(null);
+                  setTitle("");
+                  setLevel("");
+                  setDescription("");
+                  setSalaryFrom("");
+                  setSalaryTo("");
+                  setExperience("");
+                  setSchedule("");
+                  setWorkHours("");
+                  setWorkFormat("");
+                  setCompetencies([]);
+                }}
+              >
+                Отмена
+              </button>
+              <button className="btn" type="submit" disabled={busy}>
+                {busy ? "Сохраняем…" : "Создать"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div style={{ marginBottom: "var(--gap)" }}>
         <input
           className="input"
           placeholder="Поиск по названию или описанию..."
@@ -166,15 +346,19 @@ export default function VacanciesPage() {
             <thead>
               <tr>
                 <th>Название</th>
-                <th>Статус</th>
+                <th>Уровень</th>
                 <th>Описание</th>
               </tr>
             </thead>
             <tbody>
               {filteredItems?.map((v) => (
-                <tr key={v.id}>
+                <tr 
+                  key={v.id} 
+                  style={{ cursor: "pointer" }}
+                  onClick={() => navigate(`/vacancies/${v.id}`)}
+                >
                   <td>{v.title}</td>
-                  <td><StatusBadge status={v.status} /></td>
+                  <td>{v.level || "—"}</td>
                   <td>{v.description || "—"}</td>
                 </tr>
               ))}
