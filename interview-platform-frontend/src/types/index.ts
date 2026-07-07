@@ -66,10 +66,12 @@ export interface Vacancy {
   isArchived: boolean;
 }
 
+export type CompetencyCategory = "Hard Skills" | "Soft Skills" | "Tech Skills" | "Other";
+
 export interface Competency {
   id: string;
   name: string;
-  category?: string | null;
+  category?: CompetencyCategory | null; 
   description?: string | null;
 }
 

@@ -264,21 +264,46 @@ export default function VacanciesPage() {
             </div>
 
             <div className="field">
-              <label>Компетенции</label>
-              {competencies.map((c, i) => (
-                <div key={i} className="field-row" style={{ marginBottom: 8 }}>
+            <label>Компетенции</label>
+            {competencies.length === 0 && (
+              <div>
+                <button
+                  type="button"
+                  className="btn btn-sm"
+                  onClick={addCompetency}
+                >
+                  + Добавить компетенцию
+                </button>
+              </div>
+            )}
+
+            {competencies.map((c, i) => {
+              const isLast = i === competencies.length - 1;
+              return (
+                <div 
+                  key={i} 
+                  className={isLast ? "competency-field-row-with-add" : "competency-field-row-plain"}
+                >
                   <input
                     className="input"
-                    placeholder="Название"
+                    placeholder="Название компетенции"
                     value={c.name}
+                    required
                     onChange={(e) => updateCompetency(i, "name", e.target.value)}
                   />
-                  <input
-                    className="input"
-                    placeholder="Категория"
-                    value={c.category || ""}
+                  <select
+                    className="select"
+                    value={c.category}
+                    required
                     onChange={(e) => updateCompetency(i, "category", e.target.value)}
-                  />
+                  >
+                    <option value="" disabled hidden>Выберите категорию</option>
+                    <option value="Hard Skills">Hard Skills</option>
+                    <option value="Soft Skills">Soft Skills</option>
+                    <option value="Tech Skills">Tech Skills</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
@@ -286,16 +311,20 @@ export default function VacanciesPage() {
                   >
                     Удалить
                   </button>
+
+                  {isLast && (
+                    <button
+                      type="button"
+                      className="btn btn-sm"
+                      onClick={addCompetency}
+                    >
+                      + Добавить
+                    </button>
+                  )}
                 </div>
-              ))}
-              <button
-                type="button"
-                className="btn btn-sm"
-                onClick={addCompetency}
-              >
-                + Добавить компетенцию
-              </button>
-            </div>
+              );
+            })}
+          </div>
 
             <div className="btn-row">
               <button

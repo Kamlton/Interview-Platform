@@ -118,7 +118,7 @@ app.MapControllers();
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
-    try
+try
     {
         var context = services.GetRequiredService<AppDbContext>(); 
         await context.Database.MigrateAsync(); 
@@ -127,7 +127,7 @@ using (var scope = app.Services.CreateScope())
         var hasher = services.GetRequiredService<IPasswordHasher>();
         var config = services.GetRequiredService<IConfiguration>();
         await DbSeeder.SeedAsync(context, hasher, config);
-        Console.WriteLine("Начальные данные успешно добавлены!");
+        Console.WriteLine("База данных успешно наполнена начальными данными (Seed)!");
     }
     catch (Exception ex)
     {
