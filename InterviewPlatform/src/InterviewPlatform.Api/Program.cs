@@ -123,6 +123,11 @@ using (var scope = app.Services.CreateScope())
         var context = services.GetRequiredService<AppDbContext>(); 
         await context.Database.MigrateAsync(); 
         Console.WriteLine("База данных успешно обновлена!");
+
+        var hasher = services.GetRequiredService<IPasswordHasher>();
+        var config = services.GetRequiredService<IConfiguration>();
+        await DbSeeder.SeedAsync(context, hasher, config);
+        Console.WriteLine("Начальные данные успешно добавлены!");
     }
     catch (Exception ex)
     {

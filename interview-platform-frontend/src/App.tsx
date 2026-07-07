@@ -7,20 +7,18 @@ import CandidateFormPage from "./pages/CandidateFormPage";
 import InterviewsPage from "./pages/InterviewsPage";
 import InterviewPage from "./pages/InterviewPage";
 import VacanciesPage from "./pages/VacanciesPage";
-import CompetenciesPage from "./pages/CompetenciesPage";
 import UsersPage from "./pages/UsersPage";
 import AuditPage from "./pages/AuditPage";
 import ChangePasswordPage from "./pages/ChangePasswordPage";
+import VacancyPage from "./pages/VacancyPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 
 export default function App() {
   return (
     <Routes>
-      {/* Публичные маршруты */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/404" element={<NotFoundPage />} />
 
-      {/* Защищённые маршруты */}
       <Route element={<ProtectedRoute />}>
         <Route element={<Layout />}>
           <Route index element={<Navigate to="/interviews" replace />} />
@@ -33,7 +31,7 @@ export default function App() {
             <Route path="candidates/new" element={<CandidateFormPage />} />
             <Route path="candidates/:id" element={<CandidateFormPage />} />
             <Route path="vacancies" element={<VacanciesPage />} />
-            <Route path="competencies" element={<CompetenciesPage />} />
+            <Route path="vacancies/:id" element={<VacancyPage />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={["Администратор"]} />}>
@@ -42,8 +40,6 @@ export default function App() {
           </Route>
         </Route>
       </Route>
-
-      {/* 404 — должен быть последним маршрутом */}
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
