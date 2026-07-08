@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, useRef, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { interviewsApi, candidatesApi, vacanciesApi } from "../api";
 import { apiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { useToast } from "../components/ToastContext"; 
 import type { Paged, InterviewListItem, CandidateListItem, Vacancy } from "../types";
 import { PageHeader, Spinner, EmptyState, ErrorState, StatusBadge, Pagination } from "../components/ui";
 import { DatePicker } from "../components/DatePicker";
@@ -10,6 +11,10 @@ import { TimeSelect } from "../components/TimeSelect";
 import {
   combineDateAndTime, getBlockedTimesForDate, getScheduledTimesForDate, toLocalDateString,
 } from "../utils/interviewSchedule";
+
+type SortField = "candidateName" | "vacancyTitle" | "interviewerName" | "scheduledAt" | "status";
+type SortOrder = "asc" | "desc" | null;
+type DropdownType = "vacancy" | "interviewer" | "date" | "status" | null;
 
 export default function InterviewsPage() {
   const navigate = useNavigate();
@@ -24,6 +29,28 @@ export default function InterviewsPage() {
   const [showForm, setShowForm] = useState(false);
   const [reload, setReload] = useState(0);
 
+  // Сортировка таблицы
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(null);
+
+  // Режим фильтрации и дропдауны
+  const [isFilterModeActive, setIsFilterModeActive] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<DropdownType>(null);
+
+  // Временные выбранные фильтры (до клика на OK)
+  const [selectedVacancies, setSelectedVacancies] = useState<string[]>([]);
+  const [selectedInterviewers, setSelectedInterviewers] = useState<string[]>([]);
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+
+  // Применённые фильтры для рендеринга
+  const [appliedVacancies, setAppliedVacancies] = useState<string[]>([]);
+  const [appliedInterviewers, setAppliedInterviewers] = useState<string[]>([]);
+  const [appliedDates, setAppliedDates] = useState<string[]>([]);
+  const [appliedStatuses, setAppliedStatuses] = useState<string[]>([]);
+
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     let active = true;
     setLoading(true); setError(null);
@@ -36,8 +63,151 @@ export default function InterviewsPage() {
     return () => { active = false; clearTimeout(t); };
   }, [page, search, reload]);
 
+  // Закрытие дропдаунов по клику снаружи
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setActiveDropdown(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Получение уникальных значений для фильтров из текущей страницы данных
+  const getUniqueValues = (type: DropdownType): string[] => {
+    if (!data?.items) return [];
+    
+    if (type === "date") {
+      const dates = data.items.map(item => 
+        new Date(item.scheduledAt).toLocaleDateString("ru-RU", { dateStyle: "short" })
+      );
+      return Array.from(new Set(dates)).sort();
+    }
+    
+    const fieldMap: Record<string, keyof InterviewListItem> = {
+      vacancy: "vacancyTitle",
+      interviewer: "interviewerName",
+      status: "status"
+    };
+
+    const field = fieldMap[type || ""];
+    if (!field) return [];
+
+    const values = data.items.map(item => item[field] || "—");
+    return Array.from(new Set(values)).sort();
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField !== field) {
+      setSortField(field);
+      setSortOrder("asc");
+    } else if (sortOrder === "asc") {
+      setSortOrder("desc");
+    } else if (sortOrder === "desc") {
+      setSortField(null);
+      setSortOrder(null);
+    }
+  };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) return "  ↕";
+    if (sortOrder === "asc") return "  ↓";
+    if (sortOrder === "desc") return "  ↑";
+    return "  ↕";
+  };
+
+  // Обработчики чекбоксов во временных состояниях
+  const handleToggleVacancy = (val: string) => {
+    setSelectedVacancies(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+  const handleToggleInterviewer = (val: string) => {
+    setSelectedInterviewers(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+  const handleToggleDate = (val: string) => {
+    setSelectedDates(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+  const handleToggleStatus = (val: string) => {
+    setSelectedStatuses(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
+  };
+
+  // Подтверждение фильтров
+  const applyVacancyFilter = () => { setAppliedVacancies(selectedVacancies); setActiveDropdown(null); };
+  const applyInterviewerFilter = () => { setAppliedInterviewers(selectedInterviewers); setActiveDropdown(null); };
+  const applyDateFilter = () => { setAppliedDates(selectedDates); setActiveDropdown(null); };
+  const applyStatusFilter = () => { setAppliedStatuses(selectedStatuses); setActiveDropdown(null); };
+
+  // Фильтрация и сортировка данных локально на клиенте
+  const getProcessedItems = (): InterviewListItem[] => {
+    if (!data?.items) return [];
+    let result = [...data.items];
+
+    // 1. Применение фильтров колонок
+    if (isFilterModeActive) {
+      if (appliedVacancies.length > 0) {
+        result = result.filter(item => appliedVacancies.includes(item.vacancyTitle || "—"));
+      }
+      if (appliedInterviewers.length > 0) {
+        result = result.filter(item => appliedInterviewers.includes(item.interviewerName || "—"));
+      }
+      if (appliedDates.length > 0) {
+        result = result.filter(item => {
+          const itemDateStr = new Date(item.scheduledAt).toLocaleDateString("ru-RU", { dateStyle: "short" });
+          return appliedDates.includes(itemDateStr);
+        });
+      }
+      if (appliedStatuses.length > 0) {
+        result = result.filter(item => appliedStatuses.includes(item.status));
+      }
+    }
+
+    // 2. Применение сортировки
+    if (!sortField || !sortOrder) return result;
+
+    return result.sort((a, b) => {
+      let valA = a[sortField] || "";
+      let valB = b[sortField] || "";
+
+      if (sortField === "scheduledAt") {
+        const timeA = new Date(valA).getTime();
+        const timeB = new Date(valB).getTime();
+        return sortOrder === "asc" ? timeA - timeB : timeB - timeA;
+      }
+
+      valA = valA.toLowerCase();
+      valB = valB.toLowerCase();
+
+      if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+      if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const processedItems = getProcessedItems();
+
+  const isVacancyFilterApplied = appliedVacancies.length > 0;
+  const isInterviewerFilterApplied = appliedInterviewers.length > 0;
+  const isDateFilterApplied = appliedDates.length > 0;
+  const isStatusFilterApplied = appliedStatuses.length > 0;
+
   return (
     <>
+      <style>{`
+        .interview-table th.filterable-th {
+          position: relative;
+        }
+        
+        .interview-table th.filterable-th.filter-mode-active {
+          padding-right: 120px !important;
+        }
+
+        @media (max-width: 1024px) {
+          .interview-table th.filterable-th.filter-mode-active {
+            padding-right: 36px !important;
+          }
+        }
+      `}</style>
+
       <PageHeader title="Собеседования">
         {canCreate && (
           <button className="btn" onClick={() => setShowForm((s) => !s)}>
@@ -50,22 +220,164 @@ export default function InterviewsPage() {
         <CreateInterview interviewerId={userId} onCreated={() => { setShowForm(false); setReload((x) => x + 1); }} />
       )}
 
-      <div className="toolbar">
+      <div className="toolbar filter-toolbar">
         <input className="input search" placeholder="Поиск по кандидату или вакансии"
           value={search} onChange={(e) => { setPage(1); setSearch(e.target.value); }} />
+        
+        <button
+          type="button"
+          className={`btn ${isFilterModeActive ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => {
+            if (isFilterModeActive) {
+              setSelectedVacancies([]);
+              setSelectedInterviewers([]);
+              setSelectedDates([]);
+              setSelectedStatuses([]);
+              setAppliedVacancies([]);
+              setAppliedInterviewers([]);
+              setAppliedDates([]);
+              setAppliedStatuses([]);
+              setActiveDropdown(null);
+            }
+            setIsFilterModeActive(!isFilterModeActive);
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="7" y1="12" x2="17" y2="12"></line>
+            <line x1="10" y1="18" x2="14" y2="18"></line>
+          </svg>
+        </button>
       </div>
 
-      <div className="panel table-wrap">
+      <div className={`panel table-wrap ${activeDropdown ? "dropdown-visible" : ""}`}>
         {loading ? <Spinner /> : error ? <ErrorState message={error} /> :
-          !data || data.items.length === 0 ? (
-            <EmptyState title="Собеседований не найдено" hint="Назначьте новое собеседование." />
+          !data || processedItems.length === 0 ? (
+            <EmptyState title="Собеседований не найдено" hint="Измените фильтры или назначьте новое собеседование." />
           ) : (
-            <table className="data">
+            <table className="data interview-table">
               <thead>
-                <tr><th>Кандидат</th><th>Вакансия</th><th>Интервьюер</th><th>Дата</th><th>Статус</th></tr>
+                <tr>
+                  {/* КАНДИДАТ (Только сортировка) */}
+                  <th className="sortable-th" onClick={() => handleSort("candidateName")}>
+                    Кандидат {renderSortIcon("candidateName")}
+                  </th>
+
+                  {/* ВАКАНСИЯ (Сортировка + Фильтр) */}
+                  <th className={`filterable-th ${isFilterModeActive ? "filter-mode-active" : ""}`}>
+                    <span className="th-label" onClick={() => handleSort("vacancyTitle")}>
+                      Вакансия {renderSortIcon("vacancyTitle")}
+                    </span>
+                    {isFilterModeActive && (
+                      <span
+                        className={`filter-trigger-btn ${isVacancyFilterApplied ? "filter-active" : ""}`}
+                        onClick={() => setActiveDropdown(activeDropdown === "vacancy" ? null : "vacancy")}
+                      >
+                        ⌄
+                      </span>
+                    )}
+                    {activeDropdown === "vacancy" && (
+                      <div ref={dropdownRef} className="filter-dropdown-menu">
+                        <div className="filter-dropdown-scroll">
+                          {getUniqueValues("vacancy").map(v => (
+                            <label key={v} className="filter-dropdown-item">
+                              <input type="checkbox" checked={selectedVacancies.includes(v)} onChange={() => handleToggleVacancy(v)} />
+                              {v}
+                            </label>
+                          ))}
+                        </div>
+                        <button className="btn filter-apply-btn" onClick={applyVacancyFilter}>OK</button>
+                      </div>
+                    )}
+                  </th>
+
+                  {/* ИНТЕРВЬЮЕР (Сортировка + Фильтр) */}
+                  <th className={`filterable-th ${isFilterModeActive ? "filter-mode-active" : ""}`}>
+                    <span className="th-label" onClick={() => handleSort("interviewerName")}>
+                      Интервьюер {renderSortIcon("interviewerName")}
+                    </span>
+                    {isFilterModeActive && (
+                      <span
+                        className={`filter-trigger-btn ${isInterviewerFilterApplied ? "filter-active" : ""}`}
+                        onClick={() => setActiveDropdown(activeDropdown === "interviewer" ? null : "interviewer")}
+                      >
+                        ⌄
+                      </span>
+                    )}
+                    {activeDropdown === "interviewer" && (
+                      <div ref={dropdownRef} className="filter-dropdown-menu">
+                        <div className="filter-dropdown-scroll">
+                          {getUniqueValues("interviewer").map(i => (
+                            <label key={i} className="filter-dropdown-item">
+                              <input type="checkbox" checked={selectedInterviewers.includes(i)} onChange={() => handleToggleInterviewer(i)} />
+                              {i}
+                            </label>
+                          ))}
+                        </div>
+                        <button className="btn filter-apply-btn" onClick={applyInterviewerFilter}>OK</button>
+                      </div>
+                    )}
+                  </th>
+
+                  {/* ДАТА (Сортировка + Фильтр только по дням) */}
+                  <th className={`filterable-th ${isFilterModeActive ? "filter-mode-active" : ""}`}>
+                    <span className="th-label" onClick={() => handleSort("scheduledAt")}>
+                      Дата {renderSortIcon("scheduledAt")}
+                    </span>
+                    {isFilterModeActive && (
+                      <span
+                        className={`filter-trigger-btn ${isDateFilterApplied ? "filter-active" : ""}`}
+                        onClick={() => setActiveDropdown(activeDropdown === "date" ? null : "date")}
+                      >
+                        ⌄
+                      </span>
+                    )}
+                    {activeDropdown === "date" && (
+                      <div ref={dropdownRef} className="filter-dropdown-menu">
+                        <div className="filter-dropdown-scroll">
+                          {getUniqueValues("date").map(d => (
+                            <label key={d} className="filter-dropdown-item">
+                              <input type="checkbox" checked={selectedDates.includes(d)} onChange={() => handleToggleDate(d)} />
+                              {d}
+                            </label>
+                          ))}
+                        </div>
+                        <button className="btn filter-apply-btn" onClick={applyDateFilter}>OK</button>
+                      </div>
+                    )}
+                  </th>
+
+                  {/* СТАТУС (Сортировка + Фильтр) */}
+                  <th className={`filterable-th ${isFilterModeActive ? "filter-mode-active" : ""}`}>
+                    <span className="th-label" onClick={() => handleSort("status")}>
+                      Статус {renderSortIcon("status")}
+                    </span>
+                    {isFilterModeActive && (
+                      <span
+                        className={`filter-trigger-btn ${isStatusFilterApplied ? "filter-active" : ""}`}
+                        onClick={() => setActiveDropdown(activeDropdown === "status" ? null : "status")}
+                      >
+                        ⌄
+                      </span>
+                    )}
+                    {activeDropdown === "status" && (
+                      <div ref={dropdownRef} className="filter-dropdown-menu">
+                        <div className="filter-dropdown-scroll">
+                          {getUniqueValues("status").map(s => (
+                            <label key={s} className="filter-dropdown-item">
+                              <input type="checkbox" checked={selectedStatuses.includes(s)} onChange={() => handleToggleStatus(s)} />
+                              {s}
+                            </label>
+                          ))}
+                        </div>
+                        <button className="btn filter-apply-btn" onClick={applyStatusFilter}>OK</button>
+                      </div>
+                    )}
+                  </th>
+                </tr>
               </thead>
               <tbody>
-                {data.items.map((iv) => (
+                {processedItems.map((iv) => (
                   <tr key={iv.id} className="clickable" onClick={() => navigate(`/interviews/${iv.id}`)}>
                     <td>{iv.candidateName}</td>
                     <td>{iv.vacancyTitle}</td>
@@ -83,8 +395,10 @@ export default function InterviewsPage() {
   );
 }
 
+// Компонент CreateInterview остался без изменений
 function CreateInterview({ interviewerId, onCreated }:
   { interviewerId: string | null; onCreated: () => void }) {
+  const { showToast } = useToast();
   const [candidates, setCandidates] = useState<CandidateListItem[]>([]);
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
   const [candidateId, setCandidateId] = useState("");
@@ -204,6 +518,12 @@ function CreateInterview({ interviewerId, onCreated }:
         plan: plan || undefined,
         scheduledAt: combineDateAndTime(scheduledDate, scheduledTime).toISOString(),
       });
+
+      const currentCandidate = candidates.find(c => c.id === candidateId);
+      const candidateName = currentCandidate ? currentCandidate.fullName : "Кандидат";
+      
+      showToast(`Собеседование для кандидата "${candidateName}" успешно назначено.`);
+
       onCreated();
       return iv;
     } catch (err) {
