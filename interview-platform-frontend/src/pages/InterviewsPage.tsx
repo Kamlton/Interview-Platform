@@ -141,6 +141,16 @@ export default function InterviewsPage() {
   const applyDateFilter = () => { setAppliedDates(selectedDates); setActiveDropdown(null); };
   const applyStatusFilter = () => { setAppliedStatuses(selectedStatuses); setActiveDropdown(null); };
 
+  async function handleArchive(id: string, archived: boolean) {
+  if (!confirm(`Отправить собеседование в архив?`)) return;
+  try {
+    await interviewsApi.archive(id, archived);
+    setReload((x) => x + 1);
+  } catch (e) {
+    setError(apiError(e));
+  }
+}
+
   // Фильтрация и сортировка данных локально на клиенте
   const getProcessedItems = (): InterviewListItem[] => {
     if (!data?.items) return [];
@@ -429,6 +439,7 @@ export default function InterviewsPage() {
                       </div>
                     )}
                   </th>
+                  <th style={{ width: 120, textAlign: "center" }}>Действия</th>
                 </tr>
               </thead>
               <tbody>
@@ -439,6 +450,17 @@ export default function InterviewsPage() {
                     <td className="muted">{iv.interviewerName}</td>
                     <td className="muted">{new Date(iv.scheduledAt).toLocaleString("ru-RU", { dateStyle: "short", timeStyle: "short" })}</td>
                     <td><StatusBadge status={iv.status} /></td>
+                    <td style={{ textAlign: "center" }}>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleArchive(iv.id, true);
+                        }}
+                      >
+                        В архив
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

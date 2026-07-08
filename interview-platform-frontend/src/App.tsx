@@ -13,6 +13,7 @@ import ChangePasswordPage from "./pages/ChangePasswordPage";
 import VacancyPage from "./pages/VacancyPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ToastProvider } from "./components/ToastContext";
+import ArchivePage from "./pages/ArchivePage";
 
 export default function App() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
             <Route path="candidates/:id" element={<CandidateFormPage />} />
             <Route path="vacancies" element={<VacanciesPage />} />
             <Route path="vacancies/:id" element={<VacancyPage />} />
+            <Route path="archive" element={<ArchivePage />} />
           </Route>
 
           <Route element={<ProtectedRoute roles={["Администратор"]} />}>

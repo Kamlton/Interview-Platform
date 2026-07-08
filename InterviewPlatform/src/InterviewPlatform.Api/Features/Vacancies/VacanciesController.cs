@@ -208,5 +208,13 @@ public class VacanciesController(AppDbContext db, ICurrentUser currentUser) : Co
             v.Schedule, v.WorkHours, v.WorkFormat,
             v.Status, v.IsArchived);
     }
+    [HttpPost("{id:guid}/archive")]
+    public async Task<IActionResult> Archive(Guid id, [FromQuery] bool archived = true, CancellationToken ct = default)
+    {
+        var v = await db.Vacancies.FindAsync([id], ct) ?? throw new NotFoundException("Вакансия не найдена");
+        v.IsArchived = archived;
+        await db.SaveChangesAsync(ct);
+        return NoContent();
+    }
 }
 

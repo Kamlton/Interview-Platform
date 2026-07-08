@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react"; // <-- ДОБАВЬТЕ
+import { useState, useEffect } from "react";
 import { useAuth } from "../auth/AuthContext";
 import AuditTracker from "../audit/AuditTracker";
 import type { Role } from "../types";
@@ -13,6 +13,7 @@ const NAV: NavItem[] = [
   { to: "/vacancies", label: "Вакансии", roles: ["Администратор", "Отдел кадров"] },
   { to: "/users", label: "Пользователи", roles: ["Администратор"] },
   { to: "/audit", label: "Аудит", roles: ["Администратор"] },
+  { to: "/archive", label: "Архив", roles: ["Администратор", "Отдел кадров"] },
 ];
 
 function CurrentDateTime() {
@@ -45,7 +46,6 @@ export default function Layout() {
     <div className="app">
       <AuditTracker />
       <aside className="sidebar">
-        {/* ЗАМЕНЕННЫЙ БЛОК БРЕНДА НА КАРТИНКУ */}
         <div className="brand" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
           <img 
             src={logoImg} 

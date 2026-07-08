@@ -4,6 +4,7 @@ export type CandidateStatus = "New" | "InProgress" | "Hired" | "Rejected";
 export type InterviewStatus = "Planned" | "InProgress" | "Completed" | "Cancelled";
 export type DecisionType = "Offer" | "Reject" | "Hold";
 export type DocumentType = "OfferLetter" | "RejectionLetter" | "InterviewProtocol";
+export type ArchiveType = "Candidate" | "Vacancy" | "Interview";
 
 export interface AuthResponse {
   token: string;
@@ -122,4 +123,13 @@ export interface AuditLogEntry {
   role: string;
   time: string;
   action: string;
+}
+
+export interface ArchiveItem {
+  id: string;
+  type: ArchiveType;
+  typeLabel: string;
+  title: string;
+  subtitle?: string;
+  createdAt: string;
 }
