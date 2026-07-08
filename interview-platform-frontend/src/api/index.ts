@@ -2,7 +2,7 @@ import { api } from "./client";
 import type {
   AuthResponse, Paged, CandidateListItem, CandidateDetails, SaveCandidate,
   Vacancy, Matrix, InterviewListItem, InterviewDetails, Protocol,
-  UserDto, DecisionType, DocumentType, AuditLogEntry,
+  UserDto, DecisionType, DocumentType, AuditLogEntry, ArchiveItem
 } from "../types";
 
 export const authApi = {
@@ -36,6 +36,8 @@ export const vacanciesApi = {
     api.get<any[]>(`/api/vacancies/${vacancyId}/competencies`).then(r => r.data),
   update: (id: string, body: any) =>
     api.put<Vacancy>(`/api/vacancies/${id}`, body).then((r) => r.data),
+  archive: (id: string, archived: boolean) =>
+    api.post(`/api/vacancies/${id}/archive`, null, { params: { archived } }),
 };
 export const matricesApi = {
   get: (id: string) => api.get<Matrix>(`/api/matrices/${id}`).then((r) => r.data),
@@ -58,6 +60,8 @@ export const interviewsApi = {
   decide: (id: string, decisionType: DecisionType, comment?: string) =>
     api.post(`/api/interviews/${id}/decision`, { decisionType, comment }),
   printUrl: (id: string, type: DocumentType) => `/api/interviews/${id}/print/${type}`,
+  archive: (id: string, archived: boolean) =>
+    api.post(`/api/interviews/${id}/archive`, null, { params: { archived } }),
 };
 
 export const usersApi = {
@@ -71,4 +75,17 @@ export const auditApi = {
   userHistory: (username: string) =>
     api.get<AuditLogEntry[]>(`/api/audit/users/${encodeURIComponent(username)}/actions`)
       .then((r) => r.data),
+};
+
+export const archiveApi = {
+  list: (params: {
+    type?: string;
+    search?: string;
+    sort?: string;
+    dir?: string;
+    page?: number;
+    size?: number;
+  }) => api.get<Paged<ArchiveItem>>("/api/archive", { params }).then((r) => r.data),
+  restore: (type: string, id: string) => api.post(`/api/archive/${type}/${id}/restore`),
+  remove: (type: string, id: string) => api.delete(`/api/archive/${type}/${id}`),
 };

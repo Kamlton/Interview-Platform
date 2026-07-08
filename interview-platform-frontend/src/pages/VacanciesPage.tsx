@@ -68,6 +68,17 @@ export default function VacanciesPage() {
     load();
   }, []);
 
+  async function handleArchive(id: string, archived: boolean) {
+  if (!confirm(`Отправить вакансию в архив?`)) return;
+  try {
+    await vacanciesApi.archive(id, archived);
+    showToast(`Вакансия ${archived ? "отправлена в архив" : "восстановлена из архива"}`);
+    await load();
+  } catch (e) {
+    setError(apiError(e));
+  }
+}
+
   // Закрытие дропдаунов по клику вне
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -655,6 +666,7 @@ export default function VacanciesPage() {
                     </div>
                   )}
                 </th>
+                <th style={{ width: 120, textAlign: "center" }}>Действия</th>
               </tr>
             </thead>
             <tbody>
@@ -668,6 +680,17 @@ export default function VacanciesPage() {
                   <td>{v.level || "—"}</td>
                   <td>{v.schedule || "—"}</td>
                   <td>{v.workFormat || "—"}</td>
+                  <td style={{ textAlign: "center" }}>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleArchive(v.id, true);
+                      }}
+                    >
+                      В архив
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

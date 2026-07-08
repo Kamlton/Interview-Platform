@@ -15,6 +15,7 @@ export default function CandidatesPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reload, setReload] = useState(0);
 
   // Сортировка
   const [sortField, setSortField] = useState<SortField | null>(null);
@@ -45,7 +46,7 @@ export default function CandidatesPage() {
         .finally(() => active && setLoading(false));
     }, search ? 300 : 0);
     return () => { active = false; clearTimeout(t); };
-  }, [page, search]);
+  }, [page, search, reload]);
 
   // Закрытие выпадающего меню при клике вне его области
   useEffect(() => {
@@ -101,6 +102,17 @@ export default function CandidatesPage() {
     setAppliedStatuses(selectedStatuses);
     setActiveDropdown(null);
   };
+
+  async function handleArchive(id: string, archived: boolean) {
+  if (!confirm(`Отправить кандидата в архив?`)) return;
+  try {
+    await candidatesApi.archive(id, archived);
+    // Обновляем данные (перезагружаем страницу)
+    setReload((x) => x + 1);
+  } catch (e) {
+    setError(apiError(e));
+  }
+}
 
   // Комбинированная обработка данных: сначала фильтрация, затем сортировка
   const getFilteredAndSortedItems = (): CandidateListItem[] => {
@@ -230,6 +242,7 @@ export default function CandidatesPage() {
                       </div>
                     )}
                   </th>
+                  <th style={{ width: 120, textAlign: "center" }}>Действия</th>
                 </tr>
               </thead>
               <tbody>
@@ -238,6 +251,17 @@ export default function CandidatesPage() {
                     <td>{c.fullName}</td>
                     <td className="muted">{c.city || "—"}</td>
                     <td><StatusBadge status={c.status} /></td>
+                    <td style={{ textAlign: "center" }}>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleArchive(c.id, true);
+                        }}
+                      >
+                        В архив
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

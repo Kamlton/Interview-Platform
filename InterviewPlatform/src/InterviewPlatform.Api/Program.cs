@@ -14,6 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using QuestPDF.Infrastructure;
+using InterviewPlatform.Api.Features.Archive;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,6 +57,7 @@ builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IAuditService, AuditService>();
+builder.Services.AddScoped<ArchiveService>();
 // Файловый аудит действий пользователя (клики, переходы). Singleton — сервис
 // держит словарь блокировок на файлы, он должен быть один на процесс.
 builder.Services.AddSingleton<IUserActionAuditService, UserActionAuditService>();
