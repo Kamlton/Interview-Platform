@@ -21,7 +21,7 @@ export default function CandidateFormPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // НОВЫЙ СТЕЙТ: если это редактирование, изначально включаем режим «только чтение»
+  // Если это редактирование, изначально включаем режим «только чтение»
   const [isReadOnly, setIsReadOnly] = useState(isEdit);
 
   useEffect(() => {
@@ -97,95 +97,111 @@ export default function CandidateFormPage() {
   return (
     <>
       <PageHeader title={isEdit ? (isReadOnly ? "Информация о кандидате" : "Редактирование кандидата") : "Новый кандидат"}>
-  <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
-    
-    {/* 1. Режим СОЗДАНИЯ нового кандидата */}
-    {!isEdit && (
-      <button className="btn" type="submit" disabled={busy}>
-        {busy ? "Создаем…" : "Создать"}
-      </button>
-    )}
+        <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
+          
+          {/* 1. Режим СОЗДАНИЯ нового кандидата */}
+          {!isEdit && (
+            <button 
+              className="btn" 
+              type="submit" 
+              form="candidate-form" // Связываем кнопку с формой
+              disabled={busy}
+            >
+              {busy ? "Создаем…" : "Создать"}
+            </button>
+          )}
 
-    {/* 2. Режим РЕДАКТИРОВАНИЯ (когда вошли в редактирование и разрешена запись) */}
-    {isEdit && !isReadOnly && (
-      <>
-        <button className="btn" type="submit" disabled={busy}>
-          {busy ? "Сохраняем…" : "Сохранить"}
-        </button>
-        <button className="btn btn-ghost" type="button" disabled={busy} onClick={() => setIsReadOnly(true)}>
-          Отменить редактирование
-        </button>
-      </>
-    )}
+          {/* 2. Режим РЕДАКТИРОВАНИЯ (активная форма) */}
+          {isEdit && !isReadOnly && (
+            <>
+              <button 
+                className="btn" 
+                type="submit" 
+                form="candidate-form" // Связываем кнопку с формой
+                disabled={busy}
+              >
+                {busy ? "Сохраняем…" : "Сохранить"}
+              </button>
+              <button className="btn btn-ghost" type="button" disabled={busy} onClick={() => setIsReadOnly(true)}>
+                Отменить редактирование
+              </button>
+            </>
+          )}
 
-    {/* 3. Режим ПРОСМОТРА (когда вошли в карточку, но только для чтения) */}
-    {isEdit && isReadOnly && (
-      <button className="btn" type="button" onClick={() => setIsReadOnly(false)}>
-        Редактировать
-      </button>
-    )}
-    
-    {/* Вертикальный разделитель (он будет всегда, так как кнопка "Назад" всегда идёт второй группой) */}
-    <div style={{
-      width: "1px",
-      backgroundColor: "var(--border-color, #ccc)",
-      alignSelf: "stretch",
-      opacity: 0.6
-    }} />
+          {/* 3. Режим ПРОСМОТРА (только чтение) */}
+          {isEdit && isReadOnly && (
+            <button className="btn" type="button" onClick={() => setIsReadOnly(false)}>
+              Редактировать
+            </button>
+          )}
+          
+          {/* Вертикальный разделитель */}
+          <div style={{
+            width: "1px",
+            backgroundColor: "var(--border-color, #ccc)",
+            alignSelf: "stretch",
+            opacity: 0.6
+          }} />
 
-    {/* Кнопка возврата, которая всегда отделена палочкой */}
-    <button className="btn btn-ghost" type="button" onClick={() => navigate("/candidates")}>
-      Назад к кандидатам
-    </button>
-  </div>
-</PageHeader>
+          {/* Кнопка возврата */}
+          <button className="btn btn-ghost" type="button" onClick={() => navigate("/candidates")}>
+            Назад к кандидатам
+          </button>
+        </div>
+      </PageHeader>
       
-
       {error && <ErrorState message={error} />}
 
-      <form className="card" onSubmit={onSubmit}>
-          <div className="field">
-            <label>ФИО *</label>
-            <input className="input" value={form.fullName} required disabled={isReadOnly}
-              onChange={(e) => set("fullName", e.target.value)} />
+      {/* Добавлен id="candidate-form" для связи с кнопками в PageHeader */}
+      <form id="candidate-form" className="card" onSubmit={onSubmit}>
+        <div className="field">
+          <label>ФИО *</label>
+          <input className="input" value={form.fullName} required disabled={isReadOnly}
+            onChange={(e) => set("fullName", e.target.value)} />
+        </div>
+        <div className="grid-2">
+          <div className="field"><label>Телефон *</label>
+            <input className="input" value={form.phone} required disabled={isReadOnly} onChange={(e) => set("phone", e.target.value)} />
           </div>
           <div className="grid-2">
-            <div className="field"><label>Телефон *</label>
-              <input className="input" value={form.phone} required disabled={isReadOnly} onChange={(e) => set("phone", e.target.value)} />
-            </div>
             <div className="field"><label>Город</label>
-              <input className="input" value={form.city} disabled={isReadOnly} onChange={(e) => set("city", e.target.value)} /></div>
-          </div>
-          <div className="field"><label>Образование</label>
-            <textarea className="textarea" value={form.education} disabled={isReadOnly} onChange={(e) => set("education", e.target.value)} /></div>
-          <div className="field"><label>Предыдущее место работы</label>
-            <textarea className="textarea" value={form.previousWorkplace} disabled={isReadOnly}
-              onChange={(e) => set("previousWorkplace", e.target.value)} /></div>
-          <div className="field"><label>Навыки (через запятую)</label>
-            <input className="input" value={skillsText} placeholder="C#, SQL, EF Core" disabled={isReadOnly}
-              onChange={(e) => setSkillsText(e.target.value)} /></div>
-        </form>
-
-        <div>
-          {isEdit && (
-            <div className="card">
-              <h2>Собеседования</h2>
-              {interviews.length === 0 ? <div className="muted">Пока нет собеседований.</div> : (
-                <table className="data">
-                  <tbody>
-                    {interviews.map((iv) => (
-                      <tr key={iv.id} className="clickable" onClick={() => navigate(`/interviews/${iv.id}`)}>
-                        <td>{iv.vacancyTitle}</td>
-                        <td className="muted">{new Date(iv.scheduledAt).toLocaleDateString("ru-RU")}</td>
-                        <td><StatusBadge status={iv.status} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
+              <input className="input" value={form.city} disabled={isReadOnly} onChange={(e) => set("city", e.target.value)} />
             </div>
-          )}
+          </div>
         </div>
+        <div className="field"><label>Образование</label>
+          <textarea className="textarea" value={form.education} disabled={isReadOnly} onChange={(e) => set("education", e.target.value)} />
+        </div>
+        <div className="field"><label>Предыдущее место работы</label>
+          <textarea className="textarea" value={form.previousWorkplace} disabled={isReadOnly}
+            onChange={(e) => set("previousWorkplace", e.target.value)} />
+        </div>
+        <div className="field"><label>Навыки (через запятую)</label>
+          <input className="input" value={skillsText} placeholder="C#, SQL, EF Core" disabled={isReadOnly}
+            onChange={(e) => setSkillsText(e.target.value)} />
+        </div>
+      </form>
+
+      <div>
+        {isEdit && (
+          <div className="card">
+            <h2>Собеседования</h2>
+            {interviews.length === 0 ? <div className="muted">Пока нет собеседований.</div> : (
+              <table className="data">
+                <tbody>
+                  {interviews.map((iv) => (
+                    <tr key={iv.id} className="clickable" onClick={() => navigate(`/interviews/${iv.id}`)}>
+                      <td>{iv.vacancyTitle}</td>
+                      <td className="muted">{new Date(iv.scheduledAt).toLocaleDateString("ru-RU")}</td>
+                      <td><StatusBadge status={iv.status} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+      </div>
     </>
   );
 }

@@ -166,41 +166,47 @@ export default function VacancyPage() {
 
   return (
     <>
-<PageHeader title={isEditing ? "Редактирование вакансии" : "Информация о вакансии"}>
-  <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
-    {isEditing ? (
-      <>
-        <button className="btn" type="submit" disabled={busy}>
-          {busy ? "Сохраняем…" : "Сохранить"}
-        </button>
-        <button className="btn btn-ghost" type="button" disabled={busy} onClick={cancelEdit}>
-          Отменить редактирование
-        </button>
-      </>
-    ) : (
-      <button className="btn" type="button" onClick={() => setIsEditing(true)}>
-        Редактировать
-      </button>
-    )}
-    
-    {/* Вертикальный разделитель */}
-    <div style={{
-      width: "1px",
-      backgroundColor: "var(--border-color, #ccc)", // Используй переменную цвета границ из своего проекта или обычный hex
-      alignSelf: "stretch",
-      opacity: 0.6 // Немного приглушим, чтобы не бросался в глаза сильнее кнопок
-    }} />
+      <PageHeader title={isEditing ? "Редактирование вакансии" : "Информация о вакансии"}>
+        <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
+          {isEditing ? (
+            <>
+              <button 
+                className="btn" 
+                type="submit" 
+                form="vacancy-form" // Связываем кнопку сохранения с формой
+                disabled={busy}
+              >
+                {busy ? "Сохраняем…" : "Сохранить"}
+              </button>
+              <button className="btn btn-ghost" type="button" disabled={busy} onClick={cancelEdit}>
+                Отменить редактирование
+              </button>
+            </>
+          ) : (
+            <button className="btn" type="button" onClick={() => setIsEditing(true)}>
+              Редактировать
+            </button>
+          )}
+          
+          {/* Вертикальный разделитель */}
+          <div style={{
+            width: "1px",
+            backgroundColor: "var(--border-color, #ccc)",
+            alignSelf: "stretch",
+            opacity: 0.6
+          }} />
 
-    <button className="btn btn-ghost" type="button" onClick={() => navigate("/vacancies")}>
-      Назад к вакансиям
-    </button>
-  </div>
-</PageHeader>
+          <button className="btn btn-ghost" type="button" onClick={() => navigate("/vacancies")}>
+            Назад к вакансиям
+          </button>
+        </div>
+      </PageHeader>
 
       {error && <ErrorState message={error} />}
 
       <div className="cols">
-        <form className="card" onSubmit={handleUpdate}>
+        {/* Добавлен id="vacancy-form" для связки с кнопкой в PageHeader */}
+        <form id="vacancy-form" className="card" onSubmit={handleUpdate}>
           
           <div className="field">
             <label>Название *</label>
@@ -341,12 +347,9 @@ export default function VacancyPage() {
               ))}
             </div>
           </div>
-
-          
         </form>
 
-        {/* Правая колонка: Блок Компетенций, аналогично блоку Собеседований у кандидата */}
-
+        {/* Правая колонка: Блок Компетенций */}
         <div>
           <div className="card">
             <div className="field"> <label>Компетенции вакансии</label> </div>
@@ -359,27 +362,28 @@ export default function VacancyPage() {
                   <div key={i} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
 
                     <input
-                    className="input"
-                    placeholder="Название компетенции"
-                    value={c.name}
-                    required
-                    onChange={(e) => updateCompetency(i, "name", e.target.value)}
-                  />
+                      className="input"
+                      placeholder="Название компетенции"
+                      value={c.name}
+                      required
+                      disabled={!isEditing} // Блокируем инпут в режиме просмотра
+                      onChange={(e) => updateCompetency(i, "name", e.target.value)}
+                    />
                     
                     {/* Если редактируем — показываем выпадающий список, если смотрим — заблокированный инпут */}
                     {isEditing ? (
                       <select
-                    className="select"
-                    value={c.category}
-                    required
-                    onChange={(e) => updateCompetency(i, "category", e.target.value)}
-                  >
-                    <option value="" disabled hidden>Выберите категорию</option>
-                    <option value="Hard Skills">Hard Skills</option>
-                    <option value="Soft Skills">Soft Skills</option>
-                    <option value="Tech Skills">Tech Skills</option>
-                    <option value="Other">Other</option>
-                  </select>
+                        className="select"
+                        value={c.category}
+                        required
+                        onChange={(e) => updateCompetency(i, "category", e.target.value)}
+                      >
+                        <option value="" disabled hidden>Выберите категорию</option>
+                        <option value="Hard Skills">Hard Skills</option>
+                        <option value="Soft Skills">Soft Skills</option>
+                        <option value="Tech Skills">Tech Skills</option>
+                        <option value="Other">Other</option>
+                      </select>
                     ) : (
                       <input
                         className="input"

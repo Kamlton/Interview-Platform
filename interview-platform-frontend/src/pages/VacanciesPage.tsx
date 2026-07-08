@@ -193,11 +193,23 @@ export default function VacanciesPage() {
 
   async function add(e: FormEvent) {
     e.preventDefault();
-    setBusy(true);
     setError(null);
+
+    // Ручная валидация вместо дефолтных облачков браузера
+    if (!title.trim()) {
+      return;
+    }
+
+    const hasInvalidCompetency = competencies.some(c => !c.name.trim() || !c.category);
+    if (hasInvalidCompetency) {
+      setError("Пожалуйста, заполните название и категорию для всех добавленных компетенций");
+      return;
+    }
+
+    setBusy(true);
     try {
       const payload = {
-        title,
+        title: title.trim(),
         level: level || undefined,
         description,
         salaryFrom: salaryFrom ? Number(salaryFrom.replace(/[^0-9]/g, "")) : undefined,
@@ -207,7 +219,7 @@ export default function VacanciesPage() {
         workHours: workHours || undefined,
         workFormat: workFormat || undefined,
         competencies: competencies.map((c) => ({
-          name: c.name,
+          name: c.name.trim(),
           category: c.category || "",
           description: c.description || "",
           weight: c.weight || 1,
@@ -254,39 +266,45 @@ export default function VacanciesPage() {
   return (
     <>
       <PageHeader title={isFormOpen ? "Новая вакансия" : "Вакансии"}>
-  <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
-    {isFormOpen ? (
-      <>
-        <button className="btn" type="submit" disabled={busy}>
-          {busy ? "Создаем…" : "Создать"}
-        </button>
+        <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
+          {isFormOpen ? (
+            <>
+              <button 
+                className="btn" 
+                type="submit" 
+                form="create-vacancy-form"
+                disabled={busy}
+              >
+                {busy ? "Создаем…" : "Создать"}
+              </button>
 
-        {/* Вертикальный разделитель */}
-        <div style={{
-          width: "1px",
-          backgroundColor: "var(--border-color, #ccc)",
-          alignSelf: "stretch",
-          opacity: 0.6
-        }} />
+              {/* Вертикальный разделитель */}
+              <div style={{
+                width: "1px",
+                backgroundColor: "var(--border-color, #ccc)",
+                alignSelf: "stretch",
+                opacity: 0.6
+              }} />
 
-        <button className="btn btn-ghost" type="button" onClick={() => setIsFormOpen(false)}>
-          Назад к вакансиям
-        </button>
-      </>
-    ) : (
-      <button className="btn" type="button" onClick={() => setIsFormOpen(true)}>
-        Добавить вакансию
-      </button>
-    )}
-  </div>
-</PageHeader>
+              <button className="btn btn-ghost" type="button" onClick={() => setIsFormOpen(false)}>
+                Назад к вакансиям
+              </button>
+            </>
+          ) : (
+            <button className="btn" type="button" onClick={() => setIsFormOpen(true)}>
+              Добавить вакансию
+            </button>
+          )}
+        </div>
+      </PageHeader>
 
       {isFormOpen && (
         <div style={{ marginBottom: "var(--gap)" }}>
           {error && <ErrorState message={error} />}
 
-          <div className="cols">
-            <form className="card" onSubmit={add}>
+          {/* Добавлен атрибут noValidate, который отключает системные подсказки браузера */}
+          <form id="create-vacancy-form" className="cols" onSubmit={add} noValidate>
+            <div className="card">
               <div className="field">
                 <label>Название *</label>
                 <input
@@ -429,7 +447,7 @@ export default function VacanciesPage() {
                   ))}
                 </div>
               </div>
-            </form>
+            </div>
 
             <div>
               <div className="card">
@@ -489,10 +507,11 @@ export default function VacanciesPage() {
                 </div>
               </div>
             </div>
-          </div>
+          </form>
         </div>
       )}
 
+      {/* Ниже идёт код таблицы без изменений */}
       <div className="toolbar filter-toolbar">
         <input
           className="input search"
@@ -538,7 +557,6 @@ export default function VacanciesPage() {
                   Название {renderSortIcon("title")}
                 </th>
 
-                {/* Колонка: Уровень */}
                 <th className={`filterable-th ${isFilterModeActive ? "with-padding" : ""}`}>
                   <span className="th-label" onClick={() => handleSort("level")}>
                     Уровень {renderSortIcon("level")}
@@ -572,7 +590,6 @@ export default function VacanciesPage() {
                   )}
                 </th>
 
-                {/* Колонка: График работы */}
                 <th className={`filterable-th ${isFilterModeActive ? "with-padding" : ""}`}>
                   <span className="th-label" onClick={() => handleSort("schedule")}>
                     График работы {renderSortIcon("schedule")}
@@ -606,7 +623,6 @@ export default function VacanciesPage() {
                   )}
                 </th>
 
-                {/* Колонка: Формат работы */}
                 <th className={`filterable-th ${isFilterModeActive ? "with-padding" : ""}`}>
                   <span className="th-label" onClick={() => handleSort("workFormat")}>
                     Формат {renderSortIcon("workFormat")}
