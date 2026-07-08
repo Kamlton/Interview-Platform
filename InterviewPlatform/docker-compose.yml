@@ -10,5 +10,50 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: interview_platform_api
+    ports:
+      - "5080:5080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5080
+      - ConnectionStrings__DefaultConnection=Host=db;Port=5432;Database=interview_platform;Username=postgres;Password=postgres
+      - Jwt__Issuer=InterviewPlatform
+      - Jwt__Audience=InterviewPlatform
+      - Jwt__Key=CHANGE_ME_super_secret_key_at_least_32_chars_long_0123456789
+      - Jwt__ExpiresMinutes=120
+      - Jwt__RefreshDays=7
+      - Cors__Origins__0=http://localhost:5173
+      - Cors__Origins__1=http://localhost:3000
+      - Seed__AdminEmail=admin@local
+      - Seed__AdminPassword=Admin#12345
+      - PrintForms__Engine=QuestPdf
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+  frontend:
+    build:
+      context: ../interview-platform-frontend
+      dockerfile: Dockerfile
+    container_name: interview_platform_frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:5080
+    volumes:
+      - ../interview-platform-frontend:/app
+      - /app/node_modules
+    depends_on:
+      - api
+    restart: unless-stopped
 volumes:
   pgdata:
