@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { interviewsApi, vacanciesApi } from "../api";
 import { api, apiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import { useToast } from "../components/ToastContext"; 
 import type { InterviewDetails, Competency, Protocol, DecisionType, DocumentType } from "../types";
 import { PageHeader, Spinner, ErrorState, StatusBadge } from "../components/ui";
 import { RadarChart } from "../components/RadarChart";
@@ -13,6 +14,7 @@ export default function InterviewPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { hasRole } = useAuth();
+  const { showToast } = useToast(); // Инициализируем тосты
   const canScore = hasRole("Администратор", "Отдел кадров");
   const canDecide = hasRole("Администратор", "Решала");
 
@@ -22,7 +24,6 @@ export default function InterviewPage() {
   const [summary, setSummary] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [msg, setMsg] = useState<string | null>(null);
 
   async function load() {
     if (!id) return;
@@ -38,7 +39,6 @@ export default function InterviewPage() {
       setSummary(proto.summary ?? "");
 
       const comps = await vacanciesApi.getCompetencies(d.vacancyId);
-      //setDetails(d); setProtocol(proto); setSummary(proto.summary ?? "");
       const byComp = new Map(proto.scores.map((s) => [s.competencyId, s]));
       setRows(comps.map((c: Competency) => ({
         competencyId: c.id, 
@@ -56,19 +56,33 @@ export default function InterviewPage() {
 
   async function saveScores() {
     if (!id) return;
-    setMsg(null);
     const scores = rows.filter((r) => r.score !== "")
       .map((r) => ({ competencyId: r.competencyId, score: Number(r.score), comment: r.comment || undefined }));
     try {
       await interviewsApi.saveScores(id, scores, summary || undefined);
-      setMsg("Оценки сохранены"); await load();
+      
+      // Заменяем локальный стейт сообщений глобальным тостом
+      showToast("Изменения успешно сохранены.");
+      
+      await load();
     } catch (e) { setError(apiError(e)); }
   }
 
   async function decide(type: DecisionType) {
     if (!id) return;
-    try { await interviewsApi.decide(id, type); setMsg("Решение принято"); await load(); }
-    catch (e) { setError(apiError(e)); }
+    try { 
+      await interviewsApi.decide(id, type); 
+      
+      // Локализация сообщения для тоста в зависимости от решения
+      const decisionLabels: Record<DecisionType, string> = {
+        Offer: "Выставлен оффер",
+        Reject: "Оформлен отказ",
+        Hold: "Собеседование отложено"
+      };
+      showToast(`Решение принято: ${decisionLabels[type] || type}.`);
+      
+      await load(); 
+    } catch (e) { setError(apiError(e)); }
   }
 
   async function download(type: DocumentType) {
@@ -93,7 +107,6 @@ export default function InterviewPage() {
       </PageHeader>
 
       {error && <ErrorState message={error} />}
-      {msg && <div className="state" style={{ color: "var(--green)", justifyContent: "flex-start" }}>{msg}</div>}
 
       <div className="cols">
         {/* ЛЕВЫЙ СТОЛБЕЦ — Оценки и печатные формы */}
@@ -132,7 +145,6 @@ export default function InterviewPage() {
             {canScore && <div className="btn-row"><button className="btn" onClick={saveScores}>Сохранить оценки</button></div>}
           </div>
 
-          {/* --- ПЕЧАТНЫЕ ФОРМЫ ПЕРЕНЕСЕНЫ СЮДА --- */}
           <div className="card" style={{ marginTop: "var(--gap)" }}>
             <h2>Печатные формы</h2>
             <div className="btn-row">
@@ -170,21 +182,19 @@ export default function InterviewPage() {
           )}
 
           {/* Радар-график с оценками */}
-        {protocol && protocol.scores && protocol.scores.length > 0 && (
-          <div className="card" style={{ marginTop: 'var(--gap)' }}>
-            <h2>Визуализация оценок</h2>
-            <RadarChart
-              scores={protocol.scores.map((s) => ({
-                competency: s.competencyName,
-                score: s.score,
-              }))}
-              maxScore={10}
-            />
-          </div>
-        )}
-
+          {protocol && protocol.scores && protocol.scores.length > 0 && (
+            <div className="card" style={{ marginTop: 'var(--gap)' }}>
+              <h2>Визуализация оценок</h2>
+              <RadarChart
+                scores={protocol.scores.map((s) => ({
+                  competency: s.competencyName,
+                  score: s.score,
+                }))}
+                maxScore={10}
+              />
+            </div>
+          )}
         </div>
-        
       </div>
     </>
   );

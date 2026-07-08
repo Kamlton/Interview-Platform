@@ -1,18 +1,22 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useRef, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { vacanciesApi } from "../api";
 import { apiError } from "../api/client";
 import type { Vacancy } from "../types";
 import { PageHeader, Spinner, EmptyState, ErrorState } from "../components/ui";
-import { useToast } from "../components/ToastContext"; // Импортируем контекст тостов
+import { useToast } from "../components/ToastContext";
 
 const LEVELS = ["Junior", "Middle", "Senior"];
 const EXPERIENCE_OPTIONS = ["0-1 года", "1-3 года", "3-5 лет", "5+ лет"];
 const WORK_HOURS_OPTIONS = [4, 6, 8, 10, 12];
 
+type SortField = "title" | "level" | "schedule" | "workFormat";
+type SortOrder = "asc" | "desc" | null;
+type DropdownType = "level" | "schedule" | "workFormat" | null;
+
 export default function VacanciesPage() {
   const navigate = useNavigate();
-  const { showToast } = useToast(); // Инициализируем уведомления
+  const { showToast } = useToast();
 
   const [items, setItems] = useState<Vacancy[] | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -20,6 +24,7 @@ export default function VacanciesPage() {
   const [busy, setBusy] = useState(false);
   const [search, setSearch] = useState("");
 
+  // Состояния для формы создания
   const [title, setTitle] = useState("");
   const [level, setLevel] = useState("");
   const [description, setDescription] = useState("");
@@ -31,24 +36,167 @@ export default function VacanciesPage() {
   const [workFormat, setWorkFormat] = useState("");
   const [competencies, setCompetencies] = useState<any[]>([]);
 
-  const filteredItems = items?.filter((v) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase().trim();
-    return v.title.toLowerCase().includes(q) || 
-           (v.description?.toLowerCase().includes(q) ?? false);
-  });
+  // Сортировка таблицы
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortOrder, setSortOrder] = useState<SortOrder>(null);
+
+  // Режим фильтрации и дропдауны
+  const [isFilterModeActive, setIsFilterModeActive] = useState(false);
+  const [activeDropdown, setActiveDropdown] = useState<DropdownType>(null);
+
+  // Временные выбранные фильтры (до клика на OK)
+  const [selectedLevels, setSelectedLevels] = useState<string[]>([]);
+  const [selectedSchedules, setSelectedSchedules] = useState<string[]>([]);
+  const [selectedFormats, setSelectedFormats] = useState<string[]>([]);
+
+  // Применённые фильтры для рендеринга
+  const [appliedLevels, setAppliedLevels] = useState<string[]>([]);
+  const [appliedSchedules, setAppliedSchedules] = useState<string[]>([]);
+  const [appliedFormats, setAppliedFormats] = useState<string[]>([]);
+
+  const dropdownRef = useRef<HTMLDivElement | null>(null);
 
   async function load() {
-    try { setItems(await vacanciesApi.list()); } catch (e) { setError(apiError(e)); }
+    try {
+      setItems(await vacanciesApi.list());
+    } catch (e) {
+      setError(apiError(e));
+    }
   }
-  useEffect(() => { load(); }, []);
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  // Закрытие дропдаунов по клику вне
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setActiveDropdown(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Получение уникальных значений для фильтров из загруженных данных
+  const getUniqueValues = (field: "level" | "schedule" | "workFormat"): string[] => {
+    if (!items) return [];
+    const values = items.map((item) => item[field] || "—");
+    return Array.from(new Set(values)).sort();
+  };
+
+  const handleSort = (field: SortField) => {
+    if (sortField !== field) {
+      setSortField(field);
+      setSortOrder("asc");
+    } else if (sortOrder === "asc") {
+      setSortOrder("desc");
+    } else if (sortOrder === "desc") {
+      setSortField(null);
+      setSortOrder(null);
+    }
+  };
+
+  const renderSortIcon = (field: SortField) => {
+    if (sortField !== field) return "  ↕";
+    if (sortOrder === "asc") return "  ↓";
+    if (sortOrder === "desc") return "  ↑";
+    return "  ↕";
+  };
+
+  // Переключатели чекбоксов во временных состояниях
+  const handleToggleLevel = (val: string) => {
+    setSelectedLevels((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]
+    );
+  };
+
+  const handleToggleSchedule = (val: string) => {
+    setSelectedSchedules((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]
+    );
+  };
+
+  const handleToggleFormat = (val: string) => {
+    setSelectedFormats((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val]
+    );
+  };
+
+  // Подтверждение фильтров по кнопке ОК
+  const applyLevelFilter = () => {
+    setAppliedLevels(selectedLevels);
+    setActiveDropdown(null);
+  };
+
+  const applyScheduleFilter = () => {
+    setAppliedSchedules(selectedSchedules);
+    setActiveDropdown(null);
+  };
+
+  const applyFormatFilter = () => {
+    setAppliedFormats(selectedFormats);
+    setActiveDropdown(null);
+  };
+
+  // Фильтрация, текстовый поиск и сортировка данных
+  const getProcessedItems = (): Vacancy[] => {
+    if (!items) return [];
+
+    let result = [...items];
+
+    // 1. Текстовый поиск по названию/описанию
+    if (search.trim()) {
+      const q = search.toLowerCase().trim();
+      result = result.filter(
+        (v) =>
+          v.title.toLowerCase().includes(q) ||
+          (v.description?.toLowerCase().includes(q) ?? false)
+      );
+    }
+
+    // 2. Применение фильтров колонок (если режим активен)
+    if (isFilterModeActive) {
+      if (appliedLevels.length > 0) {
+        result = result.filter((item) => appliedLevels.includes(item.level || "—"));
+      }
+      if (appliedSchedules.length > 0) {
+        result = result.filter((item) => appliedSchedules.includes(item.schedule || "—"));
+      }
+      if (appliedFormats.length > 0) {
+        result = result.filter((item) => appliedFormats.includes(item.workFormat || "—"));
+      }
+    }
+
+    // 3. Применение сортировки
+    if (!sortField || !sortOrder) return result;
+
+    return result.sort((a, b) => {
+      let valA = a[sortField] || "";
+      let valB = b[sortField] || "";
+
+      valA = valA.toLowerCase();
+      valB = valB.toLowerCase();
+
+      if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+      if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+  };
+
+  const processedItems = getProcessedItems();
+
+  const isLevelFilterApplied = appliedLevels.length > 0;
+  const isScheduleFilterApplied = appliedSchedules.length > 0;
+  const isFormatFilterApplied = appliedFormats.length > 0;
 
   async function add(e: FormEvent) {
     e.preventDefault();
-    setBusy(true); 
+    setBusy(true);
     setError(null);
-    try { 
-      const payload = { 
+    try {
+      const payload = {
         title,
         level: level || undefined,
         description,
@@ -58,18 +206,18 @@ export default function VacanciesPage() {
         schedule: schedule || undefined,
         workHours: workHours || undefined,
         workFormat: workFormat || undefined,
-        competencies: competencies.map(c => ({ 
-          name: c.name, 
+        competencies: competencies.map((c) => ({
+          name: c.name,
           category: c.category || "",
           description: c.description || "",
-          weight: c.weight || 1 
-        }))
+          weight: c.weight || 1,
+        })),
       };
-      await vacanciesApi.create(payload); 
+      await vacanciesApi.create(payload);
 
-      // Вызываем тост об успешном создании
       showToast(`Новая вакансия "${payload.title}" успешно добавлена.`);
 
+      // Очистка полей формы
       setCompetencies([]);
       setTitle("");
       setLevel("");
@@ -82,12 +230,10 @@ export default function VacanciesPage() {
       setWorkFormat("");
       setIsFormOpen(false);
       await load();
-    } 
-    catch (err) { 
-      setError(apiError(err)); 
-    } 
-    finally { 
-      setBusy(false); 
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -107,7 +253,6 @@ export default function VacanciesPage() {
 
   return (
     <>
-      {/* Динамический заголовок: меняется в зависимости от того, открыта ли форма */}
       <PageHeader title={isFormOpen ? "Новая вакансия" : "Вакансии"}>
         {isFormOpen ? (
           <button className="btn btn-ghost" onClick={() => setIsFormOpen(false)}>
@@ -123,11 +268,9 @@ export default function VacanciesPage() {
       {isFormOpen && (
         <div style={{ marginBottom: "var(--gap)" }}>
           {error && <ErrorState message={error} />}
-          
+
           <div className="cols">
             <form className="card" onSubmit={add}>
-              {/* h2 отсюда убран, так как заголовок теперь в PageHeader */}
-              
               <div className="field">
                 <label>Название *</label>
                 <input
@@ -298,11 +441,10 @@ export default function VacanciesPage() {
               </div>
             </form>
 
-            {/* Правая колонка: Блок Компетенций */}
             <div>
               <div className="card">
                 <h2>Компетенции вакансии</h2>
-                
+
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                   {competencies.length === 0 && (
                     <div className="muted" style={{ marginBottom: "8px" }}>
@@ -311,10 +453,7 @@ export default function VacanciesPage() {
                   )}
 
                   {competencies.map((c, i) => (
-                    <div 
-                      key={i} 
-                      style={{ display: "flex", gap: "8px", alignItems: "center" }}
-                    >
+                    <div key={i} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                       <input
                         className="input"
                         placeholder="Название компетенции"
@@ -322,20 +461,22 @@ export default function VacanciesPage() {
                         required
                         onChange={(e) => updateCompetency(i, "name", e.target.value)}
                       />
-                      
+
                       <select
                         className="select"
                         value={c.category}
                         required
                         onChange={(e) => updateCompetency(i, "category", e.target.value)}
                       >
-                        <option value="" disabled hidden>Выберите категорию</option>
+                        <option value="" disabled hidden>
+                          Выберите категорию
+                        </option>
                         <option value="Hard Skills">Hard Skills</option>
                         <option value="Soft Skills">Soft Skills</option>
                         <option value="Tech Skills">Tech Skills</option>
                         <option value="Other">Other</option>
                       </select>
-                      
+
                       <button
                         type="button"
                         className="btn btn-ghost"
@@ -362,40 +503,165 @@ export default function VacanciesPage() {
         </div>
       )}
 
-      {/* Реестр вакансий (скрывается или остаётся внизу в зависимости от логики макета) */}
-      <div className="toolbar">
+      <div className="toolbar filter-toolbar">
         <input
           className="input search"
           placeholder="Поиск по названию или описанию"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+
+        <button
+          type="button"
+          className={`btn ${isFilterModeActive ? "btn-primary" : "btn-ghost"}`}
+          onClick={() => {
+            if (isFilterModeActive) {
+              setSelectedLevels([]);
+              setSelectedSchedules([]);
+              setSelectedFormats([]);
+              setAppliedLevels([]);
+              setAppliedSchedules([]);
+              setAppliedFormats([]);
+              setActiveDropdown(null);
+            }
+            setIsFilterModeActive(!isFilterModeActive);
+          }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="4" y1="6" x2="20" y2="6"></line>
+            <line x1="7" y1="12" x2="17" y2="12"></line>
+            <line x1="10" y1="18" x2="14" y2="18"></line>
+          </svg>
+        </button>
       </div>
 
-      <div className="panel table-wrap">
+      <div className={`panel table-wrap ${activeDropdown ? "dropdown-visible" : ""}`}>
         {!items ? (
           <Spinner />
-        ) : filteredItems?.length === 0 ? (
-          <EmptyState title={search ? "Ничего не найдено" : "Вакансий нет"} />
+        ) : processedItems.length === 0 ? (
+          <EmptyState title={search || isFilterModeActive ? "Ничего не найдено" : "Вакансий нет"} />
         ) : (
-          <table className="data">
+          <table className="data vacancy-table">
             <thead>
               <tr>
-                <th>Название</th>
-                <th>Уровень</th>
-                <th>Описание</th>
+                <th className="sortable-th" onClick={() => handleSort("title")}>
+                  Название {renderSortIcon("title")}
+                </th>
+
+                {/* Колонка: Уровень */}
+                <th className={`filterable-th ${isFilterModeActive ? "with-padding" : ""}`}>
+                  <span className="th-label" onClick={() => handleSort("level")}>
+                    Уровень {renderSortIcon("level")}
+                  </span>
+                  {isFilterModeActive && (
+                    <span
+                      className={`filter-trigger-btn ${isLevelFilterApplied ? "filter-active" : ""}`}
+                      onClick={() => setActiveDropdown(activeDropdown === "level" ? null : "level")}
+                    >
+                      ⌄
+                    </span>
+                  )}
+                  {activeDropdown === "level" && (
+                    <div ref={dropdownRef} className="filter-dropdown-menu">
+                      <div className="filter-dropdown-scroll">
+                        {getUniqueValues("level").map((lvl) => (
+                          <label key={lvl} className="filter-dropdown-item">
+                            <input
+                              type="checkbox"
+                              checked={selectedLevels.includes(lvl)}
+                              onChange={() => handleToggleLevel(lvl)}
+                            />
+                            {lvl}
+                          </label>
+                        ))}
+                      </div>
+                      <button className="btn filter-apply-btn" onClick={applyLevelFilter}>
+                        OK
+                      </button>
+                    </div>
+                  )}
+                </th>
+
+                {/* Колонка: График работы */}
+                <th className={`filterable-th ${isFilterModeActive ? "with-padding" : ""}`}>
+                  <span className="th-label" onClick={() => handleSort("schedule")}>
+                    График работы {renderSortIcon("schedule")}
+                  </span>
+                  {isFilterModeActive && (
+                    <span
+                      className={`filter-trigger-btn ${isScheduleFilterApplied ? "filter-active" : ""}`}
+                      onClick={() => setActiveDropdown(activeDropdown === "schedule" ? null : "schedule")}
+                    >
+                      ⌄
+                    </span>
+                  )}
+                  {activeDropdown === "schedule" && (
+                    <div ref={dropdownRef} className="filter-dropdown-menu">
+                      <div className="filter-dropdown-scroll">
+                        {getUniqueValues("schedule").map((sch) => (
+                          <label key={sch} className="filter-dropdown-item">
+                            <input
+                              type="checkbox"
+                              checked={selectedSchedules.includes(sch)}
+                              onChange={() => handleToggleSchedule(sch)}
+                            />
+                            {sch}
+                          </label>
+                        ))}
+                      </div>
+                      <button className="btn filter-apply-btn" onClick={applyScheduleFilter}>
+                        OK
+                      </button>
+                    </div>
+                  )}
+                </th>
+
+                {/* Колонка: Формат работы */}
+                <th className={`filterable-th ${isFilterModeActive ? "with-padding" : ""}`}>
+                  <span className="th-label" onClick={() => handleSort("workFormat")}>
+                    Формат {renderSortIcon("workFormat")}
+                  </span>
+                  {isFilterModeActive && (
+                    <span
+                      className={`filter-trigger-btn ${isFormatFilterApplied ? "filter-active" : ""}`}
+                      onClick={() => setActiveDropdown(activeDropdown === "workFormat" ? null : "workFormat")}
+                    >
+                      ⌄
+                    </span>
+                  )}
+                  {activeDropdown === "workFormat" && (
+                    <div ref={dropdownRef} className="filter-dropdown-menu">
+                      <div className="filter-dropdown-scroll">
+                        {getUniqueValues("workFormat").map((f) => (
+                          <label key={f} className="filter-dropdown-item">
+                            <input
+                              type="checkbox"
+                              checked={selectedFormats.includes(f)}
+                              onChange={() => handleToggleFormat(f)}
+                            />
+                            {f}
+                          </label>
+                        ))}
+                      </div>
+                      <button className="btn filter-apply-btn" onClick={applyFormatFilter}>
+                        OK
+                      </button>
+                    </div>
+                  )}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {filteredItems?.map((v) => (
-                <tr 
-                  key={v.id} 
-                  style={{ cursor: "pointer" }}
+              {processedItems.map((v) => (
+                <tr
+                  key={v.id}
+                  className="clickable"
                   onClick={() => navigate(`/vacancies/${v.id}`)}
                 >
                   <td>{v.title}</td>
                   <td>{v.level || "—"}</td>
-                  <td>{v.description || "—"}</td>
+                  <td>{v.schedule || "—"}</td>
+                  <td>{v.workFormat || "—"}</td>
                 </tr>
               ))}
             </tbody>

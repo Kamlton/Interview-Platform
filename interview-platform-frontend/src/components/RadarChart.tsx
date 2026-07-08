@@ -35,7 +35,7 @@ export const RadarChart: React.FC<RadarChartProps> = ({ scores, maxScore = 10 })
           <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: '#333' }} />
           <PolarRadiusAxis domain={[0, maxScore]} tickCount={6} />
           <Radar
-            name="Оценки"
+            name="Оценки компетенций"
             dataKey="value"
             stroke="#2563EB"
             fill="#3B82F6"
