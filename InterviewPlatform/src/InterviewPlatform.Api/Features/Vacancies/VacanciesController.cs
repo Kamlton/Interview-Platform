@@ -1,6 +1,7 @@
 using InterviewPlatform.Api.Common;
 using InterviewPlatform.Api.Domain.Constants;
 using InterviewPlatform.Api.Domain.Entities;
+using InterviewPlatform.Api.Features.Audit;
 using InterviewPlatform.Api.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +15,7 @@ public record SaveVacancyRequest(string Title, string? Description, string? Stat
 [ApiController]
 [Route("api/vacancies")]
 [Authorize(Policy = Policies.HrOrAdmin)]
-public class VacanciesController(AppDbContext db) : ControllerBase
+public class VacanciesController(AppDbContext db, IUserActionAuditService userAudit) : ControllerBase
 {
     [HttpGet]
     public async Task<IEnumerable<VacancyDto>> List([FromQuery] bool includeArchived = false, CancellationToken ct = default) =>
@@ -30,6 +31,7 @@ public class VacanciesController(AppDbContext db) : ControllerBase
                               Status = req.Status ?? "Open" };
         db.Vacancies.Add(v);
         await db.SaveChangesAsync(ct);
+        await userAudit.LogCurrentUserAsync($"Создана вакансия «{v.Title}»", "/vacancies");
         return Ok(new VacancyDto(v.Id, v.Title, v.Description, v.Status, v.IsArchived));
     }
 
@@ -39,6 +41,7 @@ public class VacanciesController(AppDbContext db) : ControllerBase
         var v = await db.Vacancies.FindAsync([id], ct) ?? throw new NotFoundException("Вакансия не найдена");
         v.Title = req.Title; v.Description = req.Description; v.Status = req.Status ?? v.Status;
         await db.SaveChangesAsync(ct);
+        await userAudit.LogCurrentUserAsync($"Изменена вакансия «{v.Title}»", "/vacancies");
         return new VacancyDto(v.Id, v.Title, v.Description, v.Status, v.IsArchived);
     }
 }

@@ -6,17 +6,19 @@ using Microsoft.EntityFrameworkCore;
 using InterviewPlatform.Api.Common;
 using InterviewPlatform.Api.Domain.Entities;
 using InterviewPlatform.Api.Domain.Enums;
+using InterviewPlatform.Api.Features.Audit;
 using InterviewPlatform.Api.Infrastructure;
 
 namespace InterviewPlatform.Api.Features.Assessment;
 
-public class AssessmentService(AppDbContext db, IAuditService audit)
+public class AssessmentService(AppDbContext db, IAuditService audit, IUserActionAuditService userAudit)
 {
     public async Task SaveScoresAsync(Guid interviewId, SaveScoresRequest req, CancellationToken ct)
     {
         // 1. Загружаем собеседование с существующими оценками
         var interview = await db.Interviews
             .Include(i => i.Scores)
+            .Include(i => i.Candidate)
             .FirstOrDefaultAsync(i => i.Id == interviewId, ct)
             ?? throw new NotFoundException("Собеседование не найдено");
 
@@ -61,6 +63,9 @@ public class AssessmentService(AppDbContext db, IAuditService audit)
         
         // 8. Логируем
         await audit.LogAsync(nameof(Candidate), interview.CandidateId, "ScoresSaved", new { interviewId }, ct);
+        await userAudit.LogCurrentUserAsync(
+            $"Выставлены оценки по собеседованию кандидата {interview.Candidate.FullName}",
+            $"/interviews/{interviewId}");
     }
 
     public async Task<ProtocolDto> GetProtocolAsync(Guid interviewId, CancellationToken ct)

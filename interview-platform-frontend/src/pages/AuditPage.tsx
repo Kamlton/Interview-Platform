@@ -1,70 +1,57 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { auditApi, usersApi } from "../api";
 import { apiError } from "../api/client";
 import type { AuditLogEntry, UserDto } from "../types";
 import { PageHeader, Spinner, EmptyState, ErrorState } from "../components/ui";
 
-const KINDS: Record<string, { label: string; tone: string }> = {
-  navigate: { label: "Переход", tone: "tone-blue" },
-  click: { label: "Кнопка", tone: "tone-amber" },
-};
-
-// Действие хранится строкой вида "navigate:/candidates" или "click:Сохранить".
-function splitAction(action: string): { kind: { label: string; tone: string }; text: string } {
-  const idx = action.indexOf(":");
-  const prefix = idx > 0 ? action.slice(0, idx) : "";
-  const kind = KINDS[prefix];
-  return kind
-    ? { kind, text: action.slice(idx + 1) }
-    : { kind: { label: "Другое", tone: "tone-grey" }, text: action };
+// Бизнес-события с бэкенда — готовый читаемый текст.
+// Старые записи прежнего формата ("navigate:"/"click:") показываем как есть.
+function describeAction(action: string): string {
+  return action;
 }
 
 export default function AuditPage() {
   const [users, setUsers] = useState<UserDto[] | null>(null);
-  const [username, setUsername] = useState("");
   const [entries, setEntries] = useState<AuditLogEntry[] | null>(null);
+  const [userFilter, setUserFilter] = useState("");   // email или "" = все
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    usersApi.list()
-      .then((u) => { setUsers(u); if (u.length > 0) setUsername(u[0].email); })
-      .catch((e) => setError(apiError(e)));
-  }, []);
+  // Справочник email -> ФИО, чтобы в журнале показывать имя, а не логин.
+  const nameByEmail = useMemo(() => {
+    const map = new Map<string, string>();
+    users?.forEach((u) => map.set(u.email, u.fullName));
+    return map;
+  }, [users]);
 
-  useEffect(() => {
-    if (!username) return;
-    let cancelled = false;
+  async function load() {
     setBusy(true); setError(null);
-    auditApi.userHistory(username)
-      .then((data) => { if (!cancelled) setEntries(data); })
-      .catch((e) => { if (!cancelled) setError(apiError(e)); })
-      .finally(() => { if (!cancelled) setBusy(false); });
-    return () => { cancelled = true; };
-  }, [username]);
-
-  async function refresh() {
-    if (!username) return;
-    setBusy(true); setError(null);
-    try { setEntries(await auditApi.userHistory(username)); }
+    try { setEntries(await auditApi.allActions()); }
     catch (e) { setError(apiError(e)); }
     finally { setBusy(false); }
   }
 
-  // Журнал пишется в хронологическом порядке — показываем свежие сверху.
+  useEffect(() => {
+    usersApi.list().then(setUsers).catch(() => {});
+    load();
+  }, []);
+
   const filtered = useMemo(() => {
     if (!entries) return null;
-    const list = [...entries].reverse();
-    if (!search) return list;
-    const q = search.toLowerCase();
-    return list.filter((e) => e.action.toLowerCase().includes(q));
-  }, [entries, search]);
+    const q = search.toLowerCase().trim();
+    return entries.filter((e) => {
+      if (userFilter && e.username !== userFilter) return false;
+      if (q && !describeAction(e.action).toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }, [entries, userFilter, search]);
 
   return (
     <>
-      <PageHeader title="Аудит действий">
-        <button className="btn btn-ghost" onClick={refresh} disabled={busy || !username}>
+      <PageHeader title="Журнал аудита">
+        <button className="btn btn-ghost" onClick={load} disabled={busy}>
           {busy ? "Обновляем…" : "Обновить"}
         </button>
       </PageHeader>
@@ -72,9 +59,9 @@ export default function AuditPage() {
       {error && <ErrorState message={error} />}
 
       <div className="toolbar">
-        <select className="select search" value={username}
-          onChange={(e) => setUsername(e.target.value)} disabled={!users}>
-          {!users && <option value="">Загрузка пользователей…</option>}
+        <select className="select search" value={userFilter}
+          onChange={(e) => setUserFilter(e.target.value)}>
+          <option value="">Все пользователи</option>
           {users?.map((u) => (
             <option key={u.id} value={u.email}>{u.fullName} — {u.email}</option>
           ))}
@@ -88,24 +75,28 @@ export default function AuditPage() {
           <Spinner />
         ) : filtered.length === 0 ? (
           <EmptyState title="Записей нет"
-            hint={search ? "Ничего не найдено по вашему запросу" : "Пользователь ещё не совершал действий"} />
+            hint={search || userFilter ? "Ничего не найдено по фильтру" : "Действий пока не зафиксировано"} />
         ) : (
           <table className="data">
             <thead>
-              <tr><th>Время</th><th>Тип</th><th>Действие</th><th>Роль</th></tr>
+              <tr><th>Кто</th><th>Действие</th><th>Раздел</th><th>Время</th></tr>
             </thead>
             <tbody>
-              {filtered.map((e, i) => {
-                const { kind, text } = splitAction(e.action);
-                return (
-                  <tr key={i}>
-                    <td className="muted">{new Date(e.time).toLocaleString("ru-RU")}</td>
-                    <td><span className={"badge " + kind.tone}>{kind.label}</span></td>
-                    <td>{text}</td>
-                    <td><span className="chip">{e.role}</span></td>
-                  </tr>
-                );
-              })}
+              {filtered.map((e, i) => (
+                <tr key={i}>
+                  <td>
+                    <div>{nameByEmail.get(e.username) || e.username}</div>
+                    <span className="chip">{e.role}</span>
+                  </td>
+                  <td>{describeAction(e.action)}</td>
+                  <td>
+                    {e.link
+                      ? <Link className="btn btn-ghost btn-sm" to={e.link}>Перейти</Link>
+                      : <span className="muted">—</span>}
+                  </td>
+                  <td className="muted">{new Date(e.time).toLocaleString("ru-RU")}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}

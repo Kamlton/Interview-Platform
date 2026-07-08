@@ -1,6 +1,5 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
-import AuditTracker from "../audit/AuditTracker";
 import type { Role } from "../types";
 
 interface NavItem { to: string; label: string; roles?: Role[]; }
@@ -21,7 +20,6 @@ export default function Layout() {
 
   return (
     <div className="app">
-      <AuditTracker />
       <aside className="sidebar">
         <div className="brand">
           <span className="brand-mark">ИС</span>

@@ -68,8 +68,9 @@ export const usersApi = {
 };
 
 export const auditApi = {
-  logAction: (action: string) => api.post("/api/audit/actions", { action }),
   userHistory: (username: string) =>
     api.get<AuditLogEntry[]>(`/api/audit/users/${encodeURIComponent(username)}/actions`)
       .then((r) => r.data),
+  allActions: () =>
+    api.get<AuditLogEntry[]>("/api/audit/actions").then((r) => r.data),
 };

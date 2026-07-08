@@ -113,4 +113,5 @@ export interface AuditLogEntry {
   role: string;
   time: string;
   action: string;
+  link?: string | null;
 }

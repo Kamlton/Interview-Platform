@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Security.Claims;
 using System.Text.Json;
 using InterviewPlatform.Api.Common;
 
@@ -13,6 +14,7 @@ public class UserActionAuditService : IUserActionAuditService
 {
     private readonly string _logsDirectory;
     private readonly ILogger<UserActionAuditService> _logger;
+    private readonly IHttpContextAccessor _httpContext;
 
     // Своя блокировка на каждого пользователя. Без неё два параллельных запроса
     // (два быстрых клика, две открытые вкладки) могут писать в файл одновременно
@@ -25,16 +27,29 @@ public class UserActionAuditService : IUserActionAuditService
         WriteIndented = false // важно: каждая запись обязана занимать ровно одну строку
     };
 
-    public UserActionAuditService(IWebHostEnvironment env, ILogger<UserActionAuditService> logger)
+    public UserActionAuditService(IWebHostEnvironment env, IHttpContextAccessor httpContext,
+        ILogger<UserActionAuditService> logger)
     {
         _logger = logger;
+        _httpContext = httpContext;
         // ContentRootPath, а не WebRootPath: логи не должны быть доступны
         // напрямую по ссылке из wwwroot.
         _logsDirectory = Path.Combine(env.ContentRootPath, "AuditLogs");
         Directory.CreateDirectory(_logsDirectory);
     }
 
-    public async Task LogActionAsync(string username, string role, string action)
+    public Task LogCurrentUserAsync(string action, string? link = null)
+    {
+        var user = _httpContext.HttpContext?.User;
+        var username = user?.FindFirstValue(ClaimTypes.Email);
+        if (string.IsNullOrWhiteSpace(username))
+            return Task.CompletedTask; // вне HTTP-запроса (сидинг, тесты) — не пишем
+
+        var role = user?.FindFirstValue(ClaimTypes.Role) ?? "unknown";
+        return LogActionAsync(username, role, action, link);
+    }
+
+    public async Task LogActionAsync(string username, string role, string action, string? link = null)
     {
         if (string.IsNullOrWhiteSpace(username))
             throw new ValidationException("Username обязателен.");
@@ -46,7 +61,8 @@ public class UserActionAuditService : IUserActionAuditService
             Username = username,
             Role = string.IsNullOrWhiteSpace(role) ? "unknown" : role,
             Timestamp = DateTime.UtcNow,
-            Action = action
+            Action = action,
+            Link = string.IsNullOrWhiteSpace(link) ? null : link
         };
 
         var line = JsonSerializer.Serialize(entry, JsonOptions);
@@ -105,6 +121,31 @@ public class UserActionAuditService : IUserActionAuditService
         }
 
         return result;
+    }
+
+    public async Task<IReadOnlyList<AuditLogEntry>> GetAllHistoryAsync()
+    {
+        var result = new List<AuditLogEntry>();
+        foreach (var file in Directory.EnumerateFiles(_logsDirectory, "*.json"))
+        {
+            string[] lines;
+            try { lines = await File.ReadAllLinesAsync(file); }
+            catch (IOException) { continue; } // файл занят записью — пропускаем в этом проходе
+
+            foreach (var line in lines)
+            {
+                if (string.IsNullOrWhiteSpace(line)) continue;
+                try
+                {
+                    var entry = JsonSerializer.Deserialize<AuditLogEntry>(line, JsonOptions);
+                    if (entry is not null) result.Add(entry);
+                }
+                catch (JsonException) { /* повреждённая строка — пропускаем */ }
+            }
+        }
+
+        // Свежие сверху.
+        return result.OrderByDescending(e => e.Timestamp).ToList();
     }
 
     private string GetUserFilePath(string username)

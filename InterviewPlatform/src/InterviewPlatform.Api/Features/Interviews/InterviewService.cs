@@ -1,11 +1,12 @@
 using InterviewPlatform.Api.Common;
 using InterviewPlatform.Api.Domain.Entities;
+using InterviewPlatform.Api.Features.Audit;
 using InterviewPlatform.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace InterviewPlatform.Api.Features.Interviews;
 
-public class InterviewService(AppDbContext db, IAuditService audit)
+public class InterviewService(AppDbContext db, IAuditService audit, IUserActionAuditService userAudit)
 {
     public async Task<PagedResult<InterviewListItem>> GetRegistryAsync(PageQuery q, Guid? candidateId, CancellationToken ct)
     {
@@ -57,6 +58,10 @@ public class InterviewService(AppDbContext db, IAuditService audit)
         db.Interviews.Add(interview);
         await db.SaveChangesAsync(ct);
         await audit.LogAsync(nameof(Candidate), req.CandidateId, "InterviewCreated", new { interview.Id }, ct);
-        return await GetAsync(interview.Id, ct);
+        var details = await GetAsync(interview.Id, ct);
+        await userAudit.LogCurrentUserAsync(
+            $"Назначено собеседование кандидату {details.CandidateName} по вакансии «{details.VacancyTitle}»",
+            $"/interviews/{interview.Id}");
+        return details;
     }
 }

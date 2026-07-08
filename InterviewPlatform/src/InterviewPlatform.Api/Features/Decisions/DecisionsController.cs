@@ -2,6 +2,7 @@ using InterviewPlatform.Api.Common;
 using InterviewPlatform.Api.Domain.Constants;
 using InterviewPlatform.Api.Domain.Entities;
 using InterviewPlatform.Api.Domain.Enums;
+using InterviewPlatform.Api.Features.Audit;
 using InterviewPlatform.Api.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,7 +16,8 @@ public record DecisionDto(Guid Id, Guid InterviewId, DecisionType DecisionType, 
 [ApiController]
 [Route("api/interviews/{interviewId:guid}/decision")]
 [Authorize(Policy = Policies.DeciderOrAdmin)]
-public class DecisionsController(AppDbContext db, ICurrentUser currentUser, IAuditService audit) : ControllerBase
+public class DecisionsController(AppDbContext db, ICurrentUser currentUser, IAuditService audit,
+    IUserActionAuditService userAudit) : ControllerBase
 {
     [HttpPost]
     public async Task<ActionResult<DecisionDto>> Make(Guid interviewId, MakeDecisionRequest req, CancellationToken ct)
@@ -46,6 +48,16 @@ public class DecisionsController(AppDbContext db, ICurrentUser currentUser, IAud
         await db.SaveChangesAsync(ct);
         await audit.LogAsync(nameof(Candidate), interview.CandidateId, "Decision",
             new { req.DecisionType, interviewId }, ct);
+
+        var decisionRu = req.DecisionType switch
+        {
+            DecisionType.Offer => "Оффер",
+            DecisionType.Reject => "Отказ",
+            _ => "Пауза",
+        };
+        await userAudit.LogCurrentUserAsync(
+            $"Принято решение «{decisionRu}» по кандидату {interview.Candidate.FullName}",
+            $"/interviews/{interviewId}");
 
         return Ok(new DecisionDto(decision.Id, interviewId, decision.DecisionType, decision.Comment, decision.DecidedAt));
     }

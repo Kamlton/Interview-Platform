@@ -1,6 +1,7 @@
 using InterviewPlatform.Api.Common;
 using InterviewPlatform.Api.Domain.Constants;
 using InterviewPlatform.Api.Domain.Entities;
+using InterviewPlatform.Api.Features.Audit;
 using InterviewPlatform.Api.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +15,7 @@ public record SaveCompetencyRequest(string Name, string? Category, string? Descr
 [ApiController]
 [Route("api/competencies")]
 [Authorize(Policy = Policies.HrOrAdmin)]
-public class CompetenciesController(AppDbContext db) : ControllerBase
+public class CompetenciesController(AppDbContext db, IUserActionAuditService userAudit) : ControllerBase
 {
     [HttpGet]
     public async Task<IEnumerable<CompetencyDto>> List(CancellationToken ct) =>
@@ -28,6 +29,7 @@ public class CompetenciesController(AppDbContext db) : ControllerBase
                                  Description = req.Description };
         db.Competencies.Add(c);
         await db.SaveChangesAsync(ct);
+        await userAudit.LogCurrentUserAsync($"Создана компетенция «{c.Name}»", "/vacancies");
         return Ok(new CompetencyDto(c.Id, c.Name, c.Category, c.Description));
     }
 }

@@ -2,6 +2,7 @@ using InterviewPlatform.Api.Auth;
 using InterviewPlatform.Api.Common;
 using InterviewPlatform.Api.Domain.Constants;
 using InterviewPlatform.Api.Domain.Entities;
+using InterviewPlatform.Api.Features.Audit;
 using InterviewPlatform.Api.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -12,7 +13,7 @@ namespace InterviewPlatform.Api.Features.Users;
 [ApiController]
 [Route("api/users")]
 [Authorize(Policy = Policies.AdminOnly)] 
-public class UsersController(AppDbContext db, IPasswordHasher hasher) : ControllerBase
+public class UsersController(AppDbContext db, IPasswordHasher hasher, IUserActionAuditService userAudit) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<UserDto>>> List(CancellationToken ct) =>
@@ -40,6 +41,7 @@ public class UsersController(AppDbContext db, IPasswordHasher hasher) : Controll
         };
         db.Users.Add(user);
         await db.SaveChangesAsync(ct);
+        await userAudit.LogCurrentUserAsync($"Создан пользователь {user.FullName} с ролью «{role.Name}»", "/users");
         return CreatedAtAction(nameof(List), new UserDto(user.Id, user.FullName, user.Email, role.Name, true));
     }
 }

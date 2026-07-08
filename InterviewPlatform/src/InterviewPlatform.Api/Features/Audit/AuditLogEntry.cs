@@ -18,4 +18,8 @@ public class AuditLogEntry
 
     [JsonPropertyName("action")]
     public string Action { get; init; } = string.Empty;
+
+    /// <summary>Маршрут раздела во фронтенде, к которому относится действие (например "/vacancies").</summary>
+    [JsonPropertyName("link")]
+    public string? Link { get; init; }
 }

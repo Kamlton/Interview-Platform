@@ -1,11 +1,13 @@
 using InterviewPlatform.Api.Common;
 using InterviewPlatform.Api.Domain.Entities;
+using InterviewPlatform.Api.Features.Audit;
 using InterviewPlatform.Api.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 
 namespace InterviewPlatform.Api.Features.Candidates;
 
-public class CandidateService(AppDbContext db, ICurrentUser currentUser, IAuditService audit)
+public class CandidateService(AppDbContext db, ICurrentUser currentUser, IAuditService audit,
+    IUserActionAuditService userAudit)
 {
     public async Task<PagedResult<CandidateListItem>> GetRegistryAsync(
         PageQuery q, bool includeArchived, CancellationToken ct)
@@ -53,6 +55,7 @@ public class CandidateService(AppDbContext db, ICurrentUser currentUser, IAuditS
         db.Candidates.Add(candidate);
         await db.SaveChangesAsync(ct);
         await audit.LogAsync(nameof(Candidate), candidate.Id, "Create", new { req.FullName }, ct);
+        await userAudit.LogCurrentUserAsync($"Добавлен новый кандидат {candidate.FullName}", $"/candidates/{candidate.Id}");
         return await GetAsync(candidate.Id, ct);
     }
 
@@ -68,6 +71,7 @@ public class CandidateService(AppDbContext db, ICurrentUser currentUser, IAuditS
         await ApplySkillsAsync(c, req.Skills, ct);
         await db.SaveChangesAsync(ct);
         await audit.LogAsync(nameof(Candidate), c.Id, "Update", null, ct);
+        await userAudit.LogCurrentUserAsync($"Изменён кандидат {c.FullName}", $"/candidates/{c.Id}");
         return await GetAsync(c.Id, ct);
     }
 
