@@ -97,23 +97,53 @@ export default function CandidateFormPage() {
   return (
     <>
       <PageHeader title={isEdit ? (isReadOnly ? "Информация о кандидате" : "Редактирование кандидата") : "Новый кандидат"}>
-        <div style={{ display: "flex", gap: "8px" }}>
-          {/* Кнопка Редактировать / Отмена */}
-          {isEdit && (
-            isReadOnly ? (
-              <button className="btn" onClick={() => setIsReadOnly(false)}>Редактировать</button>
-            ) : (
-              <button className="btn btn-ghost" disabled={busy} onClick={() => setIsReadOnly(true)}>Отмена</button>
-            )
-          )}
-          <button className="btn btn-ghost" onClick={() => navigate("/candidates")}>Назад</button>
-        </div>
-      </PageHeader>
+  <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
+    
+    {/* 1. Режим СОЗДАНИЯ нового кандидата */}
+    {!isEdit && (
+      <button className="btn" type="submit" disabled={busy}>
+        {busy ? "Создаем…" : "Создать"}
+      </button>
+    )}
+
+    {/* 2. Режим РЕДАКТИРОВАНИЯ (когда вошли в редактирование и разрешена запись) */}
+    {isEdit && !isReadOnly && (
+      <>
+        <button className="btn" type="submit" disabled={busy}>
+          {busy ? "Сохраняем…" : "Сохранить"}
+        </button>
+        <button className="btn btn-ghost" type="button" disabled={busy} onClick={() => setIsReadOnly(true)}>
+          Отменить редактирование
+        </button>
+      </>
+    )}
+
+    {/* 3. Режим ПРОСМОТРА (когда вошли в карточку, но только для чтения) */}
+    {isEdit && isReadOnly && (
+      <button className="btn" type="button" onClick={() => setIsReadOnly(false)}>
+        Редактировать
+      </button>
+    )}
+    
+    {/* Вертикальный разделитель (он будет всегда, так как кнопка "Назад" всегда идёт второй группой) */}
+    <div style={{
+      width: "1px",
+      backgroundColor: "var(--border-color, #ccc)",
+      alignSelf: "stretch",
+      opacity: 0.6
+    }} />
+
+    {/* Кнопка возврата, которая всегда отделена палочкой */}
+    <button className="btn btn-ghost" type="button" onClick={() => navigate("/candidates")}>
+      Назад к кандидатам
+    </button>
+  </div>
+</PageHeader>
+      
 
       {error && <ErrorState message={error} />}
 
-      <div className="cols">
-        <form className="card" onSubmit={onSubmit}>
+      <form className="card" onSubmit={onSubmit}>
           <div className="field">
             <label>ФИО *</label>
             <input className="input" value={form.fullName} required disabled={isReadOnly}
@@ -134,13 +164,6 @@ export default function CandidateFormPage() {
           <div className="field"><label>Навыки (через запятую)</label>
             <input className="input" value={skillsText} placeholder="C#, SQL, EF Core" disabled={isReadOnly}
               onChange={(e) => setSkillsText(e.target.value)} /></div>
-          
-          {/* Кнопка "Сохранить" показывается, только если мы НЕ в режиме чтения */}
-          {!isReadOnly && (
-            <div className="btn-row">
-              <button className="btn" type="submit" disabled={busy}>{busy ? "Сохраняем…" : "Сохранить"}</button>
-            </div>
-          )}
         </form>
 
         <div>
@@ -163,7 +186,6 @@ export default function CandidateFormPage() {
             </div>
           )}
         </div>
-      </div>
     </>
   );
 }

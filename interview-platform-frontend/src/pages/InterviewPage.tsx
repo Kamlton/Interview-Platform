@@ -103,8 +103,28 @@ export default function InterviewPage() {
   return (
     <>
       <PageHeader title="Собеседование">
-        <button className="btn btn-ghost" onClick={() => navigate("/interviews")}>К реестру</button>
-      </PageHeader>
+  <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
+    {canScore && (
+      <>
+        <button className="btn" type="button" onClick={saveScores}>
+          Сохранить оценки компетенций
+        </button>
+
+        {/* Вертикальный разделитель — рендерится только при наличии кнопки сохранения */}
+        <div style={{
+          width: "1px",
+          backgroundColor: "var(--border-color, #ccc)",
+          alignSelf: "stretch",
+          opacity: 0.6
+        }} />
+      </>
+    )}
+
+    <button className="btn btn-ghost" type="button" onClick={() => navigate("/interviews")}>
+      Назад к собеседованиям
+    </button>
+  </div>
+</PageHeader>
 
       {error && <ErrorState message={error} />}
 
@@ -142,7 +162,6 @@ export default function InterviewPage() {
               <textarea className="textarea" value={summary} disabled={!canScore}
                 onChange={(e) => setSummary(e.target.value)} />
             </div>
-            {canScore && <div className="btn-row"><button className="btn" onClick={saveScores}>Сохранить оценки</button></div>}
           </div>
 
           <div className="card" style={{ marginTop: "var(--gap)" }}>

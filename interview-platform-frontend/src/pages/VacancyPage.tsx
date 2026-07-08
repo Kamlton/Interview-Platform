@@ -166,22 +166,36 @@ export default function VacancyPage() {
 
   return (
     <>
-      <PageHeader title={isEditing ? "Редактирование вакансии" : "Информация о вакансии"}>
-        <div style={{ display: "flex", gap: 8 }}>
-          {isEditing ? (
-            <button className="btn btn-ghost" disabled={busy} onClick={cancelEdit}>
-              Отмена
-            </button>
-          ) : (
-            <button className="btn" onClick={() => setIsEditing(true)}>
-              Редактировать
-            </button>
-          )}
-          <button className="btn btn-ghost" onClick={() => navigate("/vacancies")}>
-            Назад
-          </button>
-        </div>
-      </PageHeader>
+<PageHeader title={isEditing ? "Редактирование вакансии" : "Информация о вакансии"}>
+  <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
+    {isEditing ? (
+      <>
+        <button className="btn" type="submit" disabled={busy}>
+          {busy ? "Сохраняем…" : "Сохранить"}
+        </button>
+        <button className="btn btn-ghost" type="button" disabled={busy} onClick={cancelEdit}>
+          Отменить редактирование
+        </button>
+      </>
+    ) : (
+      <button className="btn" type="button" onClick={() => setIsEditing(true)}>
+        Редактировать
+      </button>
+    )}
+    
+    {/* Вертикальный разделитель */}
+    <div style={{
+      width: "1px",
+      backgroundColor: "var(--border-color, #ccc)", // Используй переменную цвета границ из своего проекта или обычный hex
+      alignSelf: "stretch",
+      opacity: 0.6 // Немного приглушим, чтобы не бросался в глаза сильнее кнопок
+    }} />
+
+    <button className="btn btn-ghost" type="button" onClick={() => navigate("/vacancies")}>
+      Назад к вакансиям
+    </button>
+  </div>
+</PageHeader>
 
       {error && <ErrorState message={error} />}
 
@@ -328,21 +342,14 @@ export default function VacancyPage() {
             </div>
           </div>
 
-          {/* Кнопка "Сохранить" показывается, только если мы в режиме редактирования */}
-          {isEditing && (
-            <div className="btn-row">
-              <button className="btn" type="submit" disabled={busy}>
-                {busy ? "Сохраняем…" : "Сохранить"}
-              </button>
-            </div>
-          )}
+          
         </form>
 
         {/* Правая колонка: Блок Компетенций, аналогично блоку Собеседований у кандидата */}
 
         <div>
           <div className="card">
-            <h2>Компетенции вакансии</h2>
+            <div className="field"> <label>Компетенции вакансии</label> </div>
             
             {formCompetencies.length === 0 && !isEditing ? (
               <div className="muted">Компетенции не указаны.</div>
