@@ -29,6 +29,10 @@ export default function InterviewsPage() {
   const [showForm, setShowForm] = useState(false);
   const [reload, setReload] = useState(0);
 
+  // Состояния загрузки, поднятые из CreateInterview для управления кнопкой в шапке
+  const [busy, setBusy] = useState(false);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+
   // Сортировка таблицы
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>(null);
@@ -198,7 +202,7 @@ export default function InterviewsPage() {
         }
         
         .interview-table th.filterable-th.filter-mode-active {
-          padding-right: 120px !important;
+          padding-right: 100px !important;
         }
 
         @media (max-width: 1024px) {
@@ -209,15 +213,71 @@ export default function InterviewsPage() {
       `}</style>
 
       <PageHeader title="Собеседования">
-        {canCreate && (
-          <button className="btn" onClick={() => setShowForm((s) => !s)}>
-            {showForm ? "Скрыть форму" : "Назначить собеседование"}
+  <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
+    {canCreate && (
+      <>
+        {showForm ? (
+          <>
+            {/* 1. Кнопка "Создать" (Показывается только когда форма открыта) */}
+            <button 
+              className="btn" 
+              type="submit"                       // Оставляем submit, чтобы работал атрибут form
+              form="create-interview-form"
+              disabled={busy || loadingSchedule}
+            >
+              {busy ? "Создаем…" : "Создать"}
+            </button>
+
+            {/* Вертикальный разделитель */}
+            <div style={{
+              width: "1px",
+              backgroundColor: "var(--border-color, #ccc)",
+              alignSelf: "stretch",
+              opacity: 0.6
+            }} />
+
+            {/* 2. Кнопка "Назад к собеседованиям" (Показывается только когда форма открыта) */}
+            <button 
+              className="btn btn-ghost" 
+              type="button" 
+              onClick={() => {
+                setBusy(false);
+                setLoadingSchedule(false);
+                setShowForm(false);
+              }}
+            >
+              Назад к собеседованиям
+            </button>
+          </>
+        ) : (
+          /* 3. Кнопка "Назначить собеседование" (Показывается только когда форма САКРЫТА) */
+          <button 
+            className="btn" 
+            type="button" 
+            onClick={() => setShowForm(true)}
+          >
+            Назначить собеседование
           </button>
         )}
-      </PageHeader>
+      </>
+    )}
+  </div>
+</PageHeader>
 
       {showForm && canCreate && (
-        <CreateInterview interviewerId={userId} onCreated={() => { setShowForm(false); setReload((x) => x + 1); }} />
+        <CreateInterview 
+          interviewerId={userId} 
+          busy={busy}
+          setBusy={setBusy}
+          loadingSchedule={loadingSchedule}
+          setLoadingSchedule={setLoadingSchedule}
+          onCreated={() => { 
+            setShowForm(false); 
+            setReload((x) => x + 1); 
+            setBusy(false);
+            setLoadingSchedule(false);
+          }} 
+        />
       )}
 
       <div className="toolbar filter-toolbar">
@@ -258,12 +318,10 @@ export default function InterviewsPage() {
             <table className="data interview-table">
               <thead>
                 <tr>
-                  {/* КАНДИДАТ (Только сортировка) */}
                   <th className="sortable-th" onClick={() => handleSort("candidateName")}>
                     Кандидат {renderSortIcon("candidateName")}
                   </th>
 
-                  {/* ВАКАНСИЯ (Сортировка + Фильтр) */}
                   <th className={`filterable-th ${isFilterModeActive ? "filter-mode-active" : ""}`}>
                     <span className="th-label" onClick={() => handleSort("vacancyTitle")}>
                       Вакансия {renderSortIcon("vacancyTitle")}
@@ -291,7 +349,6 @@ export default function InterviewsPage() {
                     )}
                   </th>
 
-                  {/* ИНТЕРВЬЮЕР (Сортировка + Фильтр) */}
                   <th className={`filterable-th ${isFilterModeActive ? "filter-mode-active" : ""}`}>
                     <span className="th-label" onClick={() => handleSort("interviewerName")}>
                       Интервьюер {renderSortIcon("interviewerName")}
@@ -319,7 +376,6 @@ export default function InterviewsPage() {
                     )}
                   </th>
 
-                  {/* ДАТА (Сортировка + Фильтр только по дням) */}
                   <th className={`filterable-th ${isFilterModeActive ? "filter-mode-active" : ""}`}>
                     <span className="th-label" onClick={() => handleSort("scheduledAt")}>
                       Дата {renderSortIcon("scheduledAt")}
@@ -347,7 +403,6 @@ export default function InterviewsPage() {
                     )}
                   </th>
 
-                  {/* СТАТУС (Сортировка + Фильтр) */}
                   <th className={`filterable-th ${isFilterModeActive ? "filter-mode-active" : ""}`}>
                     <span className="th-label" onClick={() => handleSort("status")}>
                       Статус {renderSortIcon("status")}
@@ -395,9 +450,22 @@ export default function InterviewsPage() {
   );
 }
 
-// Компонент CreateInterview остался без изменений
-function CreateInterview({ interviewerId, onCreated }:
-  { interviewerId: string | null; onCreated: () => void }) {
+interface CreateInterviewProps {
+  interviewerId: string | null;
+  busy: boolean;
+  setBusy: (b: boolean) => void;
+  loadingSchedule: boolean;
+  setLoadingSchedule: (l: boolean) => void;
+  onCreated: () => void;
+}
+
+function CreateInterview({ 
+  interviewerId, 
+  setBusy, 
+  loadingSchedule, 
+  setLoadingSchedule, 
+  onCreated 
+}: CreateInterviewProps) {
   const { showToast } = useToast();
   const [candidates, setCandidates] = useState<CandidateListItem[]>([]);
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
@@ -408,8 +476,6 @@ function CreateInterview({ interviewerId, onCreated }:
   const [scheduledTime, setScheduledTime] = useState("");
   const [vacancyInterviews, setVacancyInterviews] = useState<string[]>([]);
   const [candidateInterviews, setCandidateInterviews] = useState<string[]>([]);
-  const [loadingSchedule, setLoadingSchedule] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -464,7 +530,7 @@ function CreateInterview({ interviewerId, onCreated }:
       .finally(() => active && setLoadingSchedule(false));
 
     return () => { active = false; };
-  }, [vacancyId, candidateId]);
+  }, [vacancyId, candidateId, setLoadingSchedule]);
 
   const blockedTimes = useMemo(() => {
     if (!scheduledDate) return new Set<string>();
@@ -534,7 +600,7 @@ function CreateInterview({ interviewerId, onCreated }:
   }
 
   return (
-    <form className="card" onSubmit={submit}>
+    <form id="create-interview-form" className="card" onSubmit={submit}>
       <h2>Новое собеседование</h2>
       {error && <ErrorState message={error} />}
       <div className="grid-2">
@@ -574,9 +640,6 @@ function CreateInterview({ interviewerId, onCreated }:
       </div>
       <div className="field"><label>План собеседования</label>
         <textarea className="textarea" value={plan} onChange={(e) => setPlan(e.target.value)} /></div>
-      <div className="btn-row">
-        <button className="btn" type="submit" disabled={busy || loadingSchedule}>{busy ? "Создаём…" : "Создать"}</button>
-      </div>
     </form>
   );
 }

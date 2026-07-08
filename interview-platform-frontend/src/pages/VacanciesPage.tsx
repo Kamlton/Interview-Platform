@@ -254,16 +254,32 @@ export default function VacanciesPage() {
   return (
     <>
       <PageHeader title={isFormOpen ? "Новая вакансия" : "Вакансии"}>
-        {isFormOpen ? (
-          <button className="btn btn-ghost" onClick={() => setIsFormOpen(false)}>
-            Назад
-          </button>
-        ) : (
-          <button className="btn" onClick={() => setIsFormOpen(true)}>
-            Добавить вакансию
-          </button>
-        )}
-      </PageHeader>
+  <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
+    {isFormOpen ? (
+      <>
+        <button className="btn" type="submit" disabled={busy}>
+          {busy ? "Создаем…" : "Создать"}
+        </button>
+
+        {/* Вертикальный разделитель */}
+        <div style={{
+          width: "1px",
+          backgroundColor: "var(--border-color, #ccc)",
+          alignSelf: "stretch",
+          opacity: 0.6
+        }} />
+
+        <button className="btn btn-ghost" type="button" onClick={() => setIsFormOpen(false)}>
+          Назад к вакансиям
+        </button>
+      </>
+    ) : (
+      <button className="btn" type="button" onClick={() => setIsFormOpen(true)}>
+        Добавить вакансию
+      </button>
+    )}
+  </div>
+</PageHeader>
 
       {isFormOpen && (
         <div style={{ marginBottom: "var(--gap)" }}>
@@ -413,37 +429,11 @@ export default function VacanciesPage() {
                   ))}
                 </div>
               </div>
-
-              <div className="btn-row" style={{ marginTop: "24px" }}>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => {
-                    setIsFormOpen(false);
-                    setError(null);
-                    setTitle("");
-                    setLevel("");
-                    setDescription("");
-                    setSalaryFrom("");
-                    setSalaryTo("");
-                    setExperience("");
-                    setSchedule("");
-                    setWorkHours("");
-                    setWorkFormat("");
-                    setCompetencies([]);
-                  }}
-                >
-                  Отмена
-                </button>
-                <button className="btn" type="submit" disabled={busy}>
-                  {busy ? "Сохраняем…" : "Создать"}
-                </button>
-              </div>
             </form>
 
             <div>
               <div className="card">
-                <h2>Компетенции вакансии</h2>
+                <div className="field"> <label>Компетенции вакансии</label> </div>
 
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                   {competencies.length === 0 && (
