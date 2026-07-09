@@ -83,10 +83,10 @@ export default function CandidateFormPage() {
         setIsReadOnly(true); // После успешного сохранения возвращаем режим чтения
       } else {
         showToast(`Новый кандидат "${payload.fullName}" добавлен.`);
-        navigate(`/candidates/${saved.id}`); // Перекидываем на детали созданного
+        navigate(`/candidates`); // Перекидываем на детали созданного
       }
     } catch (err) {
-      setError(apiError(err));
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setBusy(false);
     }
@@ -104,7 +104,7 @@ export default function CandidateFormPage() {
             <button 
               className="btn" 
               type="submit" 
-              form="candidate-form" // Связываем кнопку с формой
+              form="candidate-form" 
               disabled={busy}
             >
               {busy ? "Создаем…" : "Создать"}
@@ -117,7 +117,7 @@ export default function CandidateFormPage() {
               <button 
                 className="btn" 
                 type="submit" 
-                form="candidate-form" // Связываем кнопку с формой
+                form="candidate-form" 
                 disabled={busy}
               >
                 {busy ? "Сохраняем…" : "Сохранить"}
@@ -152,7 +152,6 @@ export default function CandidateFormPage() {
       
       {error && <ErrorState message={error} />}
 
-      {/* Добавлен id="candidate-form" для связи с кнопками в PageHeader */}
       <form id="candidate-form" className="card" onSubmit={onSubmit}>
         <div className="field">
           <label>ФИО *</label>
@@ -186,7 +185,19 @@ export default function CandidateFormPage() {
         {isEdit && (
           <div className="card">
             <h2>Собеседования</h2>
-            {interviews.length === 0 ? <div className="muted">Пока нет собеседований.</div> : (
+            {interviews.length === 0 ? (
+              /* Изменённый блок: выравниваем текст и кнопку по одной линии */
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div className="muted">Пока нет собеседований.</div>
+                <button 
+                  className="btn btn-ghost" 
+                  type="button"
+                  onClick={() => navigate(`/interviews?candidateId=${id}`)}
+                >
+                  Назначить собеседование
+                </button>
+              </div>
+            ) : (
               <table className="data">
                 <tbody>
                   {interviews.map((iv) => (

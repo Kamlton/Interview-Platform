@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useRef, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+// Добавили хук useSearchParams для чтения query-параметров (?candidateId=...)
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { interviewsApi, candidatesApi, vacanciesApi } from "../api";
 import { apiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -15,9 +16,21 @@ import {
 type SortField = "candidateName" | "vacancyTitle" | "interviewerName" | "scheduledAt" | "status";
 type SortOrder = "asc" | "desc" | null;
 type DropdownType = "vacancy" | "interviewer" | "date" | "status" | null;
+const STATUS_RU: Record<string, string> = {
+  New: "Новый", 
+  InProgress: "Отложен", 
+  Hired: "Оффер", 
+  Rejected: "Отказ",
+  Planned: "Запланировано", 
+  Completed: "Проведено", 
+  Cancelled: "Отменено",
+};
 
 export default function InterviewsPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams(); // <- Инициализируем работу с параметрами URL
+  const candidateIdParam = searchParams.get("candidateId");   // <- Достаем ID кандидата из ссылки
+
   const { hasRole, userId } = useAuth();
   const canCreate = hasRole("Администратор", "Отдел кадров");
 
@@ -54,6 +67,13 @@ export default function InterviewsPage() {
   const [appliedStatuses, setAppliedStatuses] = useState<string[]>([]);
 
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  // Если в URL передан candidateId, автоматически открываем форму создания
+  useEffect(() => {
+    if (candidateIdParam) {
+      setShowForm(true);
+    }
+  }, [candidateIdParam]);
 
   useEffect(() => {
     let active = true;
@@ -142,14 +162,14 @@ export default function InterviewsPage() {
   const applyStatusFilter = () => { setAppliedStatuses(selectedStatuses); setActiveDropdown(null); };
 
   async function handleArchive(id: string, archived: boolean) {
-  if (!confirm(`Отправить собеседование в архив?`)) return;
-  try {
-    await interviewsApi.archive(id, archived);
-    setReload((x) => x + 1);
-  } catch (e) {
-    setError(apiError(e));
+    if (!confirm(`Отправить собеседование в архив?`)) return;
+    try {
+      await interviewsApi.archive(id, archived);
+      setReload((x) => x + 1);
+    } catch (e) {
+      setError(apiError(e));
+    }
   }
-}
 
   // Фильтрация и сортировка данных локально на клиенте
   const getProcessedItems = (): InterviewListItem[] => {
@@ -223,56 +243,53 @@ export default function InterviewsPage() {
       `}</style>
 
       <PageHeader title="Собеседования">
-  <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
-    {canCreate && (
-      <>
-        {showForm ? (
-          <>
-            {/* 1. Кнопка "Создать" (Показывается только когда форма открыта) */}
-            <button 
-              className="btn" 
-              type="submit"                       // Оставляем submit, чтобы работал атрибут form
-              form="create-interview-form"
-              disabled={busy || loadingSchedule}
-            >
-              {busy ? "Создаем…" : "Создать"}
-            </button>
+        <div style={{ display: "flex", gap: 15, alignItems: "center" }}>
+          {canCreate && (
+            <>
+              {showForm ? (
+                <>
+                  <button 
+                    className="btn" 
+                    type="submit"
+                    form="create-interview-form"
+                    disabled={busy || loadingSchedule}
+                  >
+                    {busy ? "Создаем…" : "Создать"}
+                  </button>
 
-            {/* Вертикальный разделитель */}
-            <div style={{
-              width: "1px",
-              backgroundColor: "var(--border-color, #ccc)",
-              alignSelf: "stretch",
-              opacity: 0.6
-            }} />
+                  <div style={{
+                    width: "1px",
+                    backgroundColor: "var(--border-color, #ccc)",
+                    alignSelf: "stretch",
+                    opacity: 0.6
+                  }} />
 
-            {/* 2. Кнопка "Назад к собеседованиям" (Показывается только когда форма открыта) */}
-            <button 
-              className="btn btn-ghost" 
-              type="button" 
-              onClick={() => {
-                setBusy(false);
-                setLoadingSchedule(false);
-                setShowForm(false);
-              }}
-            >
-              Назад к собеседованиям
-            </button>
-          </>
-        ) : (
-          /* 3. Кнопка "Назначить собеседование" (Показывается только когда форма САКРЫТА) */
-          <button 
-            className="btn" 
-            type="button" 
-            onClick={() => setShowForm(true)}
-          >
-            Назначить собеседование
-          </button>
-        )}
-      </>
-    )}
-  </div>
-</PageHeader>
+                  <button 
+                    className="btn btn-ghost" 
+                    type="button" 
+                    onClick={() => {
+                      setBusy(false);
+                      setLoadingSchedule(false);
+                      setShowForm(false);
+                      setSearchParams({}); // <- При выходе очищаем ID из ссылки
+                    }}
+                  >
+                    Назад к собеседованиям
+                  </button>
+                </>
+              ) : (
+                <button 
+                  className="btn" 
+                  type="button" 
+                  onClick={() => setShowForm(true)}
+                >
+                  Назначить собеседование
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      </PageHeader>
 
       {showForm && canCreate && (
         <CreateInterview 
@@ -286,6 +303,7 @@ export default function InterviewsPage() {
             setReload((x) => x + 1); 
             setBusy(false);
             setLoadingSchedule(false);
+            setSearchParams({}); // <- После успешного создания очищаем ID из ссылки
           }} 
         />
       )}
@@ -431,7 +449,7 @@ export default function InterviewsPage() {
                           {getUniqueValues("status").map(s => (
                             <label key={s} className="filter-dropdown-item">
                               <input type="checkbox" checked={selectedStatuses.includes(s)} onChange={() => handleToggleStatus(s)} />
-                              {s}
+                              {STATUS_RU[s] || s} {/* <- Теперь выводится русский перевод, либо сам статус, если перевода нет */}
                             </label>
                           ))}
                         </div>
@@ -489,9 +507,14 @@ function CreateInterview({
   onCreated 
 }: CreateInterviewProps) {
   const { showToast } = useToast();
+  const [searchParams] = useSearchParams(); // <- Инициализируем поиск параметров в подкомпоненте
+  
+  // Если параметр есть, берем его как дефолтное состояние, иначе пустая строка
+  const initialCandidateId = searchParams.get("candidateId") || "";
+
   const [candidates, setCandidates] = useState<CandidateListItem[]>([]);
   const [vacancies, setVacancies] = useState<Vacancy[]>([]);
-  const [candidateId, setCandidateId] = useState("");
+  const [candidateId, setCandidateId] = useState(initialCandidateId); // <- Подставляем начальный ID
   const [vacancyId, setVacancyId] = useState("");
   const [plan, setPlan] = useState("");
   const [scheduledDate, setScheduledDate] = useState("");

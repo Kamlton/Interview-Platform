@@ -2,7 +2,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { usersApi } from "../api";
 import { apiError } from "../api/client";
 import type { UserDto, Role } from "../types";
-import { PageHeader, Spinner, EmptyState, StatusBadge } from "../components/ui";
+// Убрали StatusBadge из импортов, так как он больше не нужен
+import { PageHeader, Spinner, EmptyState } from "../components/ui";
 
 const ROLES: Role[] = ["Администратор", "Отдел кадров", "Решала"];
 
@@ -69,14 +70,24 @@ export default function UsersPage() {
           <div className="panel table-wrap">
             {!items ? <Spinner /> : items.length === 0 ? <EmptyState title="Пользователей нет" /> : (
               <table className="data">
-                <thead><tr><th>ФИО</th><th>E-mail</th><th>Роль</th><th>Статус</th></tr></thead>
-                <tbody>{items.map((u) => (
-                  <tr key={u.id}>
-                    <td>{u.fullName}</td><td className="muted">{u.email}</td>
-                    <td><span className="chip">{u.role}</span></td>
-                    <td><StatusBadge status={u.isActive ? "Completed" : "Cancelled"} /></td>
+                {/* Убрали <th>Статус</th> */}
+                <thead>
+                  <tr>
+                    <th>ФИО</th>
+                    <th>E-mail</th>
+                    <th>Роль</th>
                   </tr>
-                ))}</tbody>
+                </thead>
+                {/* Убрали <td> с компонентом StatusBadge */}
+                <tbody>
+                  {items.map((u) => (
+                    <tr key={u.id}>
+                      <td>{u.fullName}</td>
+                      <td className="muted">{u.email}</td>
+                      <td><span className="chip">{u.role}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             )}
         </div>

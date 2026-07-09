@@ -19,7 +19,7 @@ export function ErrorState({ message }: { message: string }) {
 }
 
 const STATUS_RU: Record<string, string> = {
-  New: "Новый", InProgress: "В работе", Hired: "Оффер", Rejected: "Отказ",
+  New: "Новый", InProgress: "Отложен", Hired: "Оффер", Rejected: "Отказ",
   Planned: "Запланировано", Completed: "Проведено", Cancelled: "Отменено",
 };
 const STATUS_TONE: Record<string, string> = {

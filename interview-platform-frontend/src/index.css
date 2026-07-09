@@ -78,13 +78,33 @@ table.data tbody tr.clickable { cursor: pointer; }
   cursor: pointer; transition: filter .12s, background .12s; font-family: inherit;
 }
 .btn:hover { filter: brightness(1.06); }
-.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn:disabled { background-color: #f5f5f5; color: #999999; border-color: #e0e0e0; cursor: not-allowed; opacity: 0.7; }
+.btn-primary:disabled { background-color: #a6a6a6;  color: #ffffff; }
+.input:disabled, .textarea:disabled { background-color: #fafafa; color: #555555; border-color: #e8e8e8; cursor: default; cursor: not-allowed;  }
+.btn-row .btn-primary:not(:disabled) { background-color: #6382A4; color: #fff; border-color: #2e598800; }
+.btn-row .btn-primary:not(:disabled):hover { background-color: #1F3A57; border-color: #e8e8e800; }
 .btn-sm { padding: 6px 11px; font-size: 13px; }
 .btn-ghost { background: #fff; color: var(--navy); border-color: var(--line-2); }
 .btn-ghost:hover { background: #F2F6FB; filter: none; }
-.btn-green { background: var(--green); border-color: var(--green); }
-.btn-danger { background: var(--red); border-color: var(--red); }
+.btn-green { background: #1892001a; border-color: #189200; color: #189200; }
+.btn-danger { background: #af00001a; border-color: #af0000; color: #af0000;}
+.btn-green:hover { background: #18920058; }
+.btn-danger:hover { background: #af000058; }
 .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+/* Новая строка для кнопок действий без переноса элементов */
+.btn-row-nowrap {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap; /* Запрещаем кнопкам падать на новую строку */
+}
+
+/* Специальный размер для кнопок-иконок, чтобы они были аккуратными и квадратными */
+.btn-icon-sm {
+  padding: 6px 10px;
+  font-size: 20px;   /* Чуть увеличили размер самих символов ↻ и ✖ */
+  line-height: 1;
+  min-width: 32px;   /* Задаем минимальную ширину для симметрии */
+}
 
 /* ---------- forms ---------- */
 .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
@@ -100,6 +120,7 @@ table.data tbody tr.clickable { cursor: pointer; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
 .search { max-width: 320px; }
 .field-hint { font-size: 12px; color: var(--muted); line-height: 1.4; }
+
 
 /* ---------- date & time pickers ---------- */
 .picker { position: relative; }

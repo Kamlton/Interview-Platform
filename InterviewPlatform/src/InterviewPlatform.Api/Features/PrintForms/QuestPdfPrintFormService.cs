@@ -103,7 +103,17 @@ public class QuestPdfPrintFormService(AppDbContext db, ICurrentUser currentUser)
                 if (!string.IsNullOrWhiteSpace(i.Summary))
                     col.Item().Text($"Заключение: {i.Summary}");
                 if (i.Decision is not null)
-                    col.Item().Text($"Решение: {i.Decision.DecisionType}");
+                    {
+                        var decisionText = i.Decision.DecisionType.ToString() switch
+                        {
+                            "Offer" => "Оффер",
+                            "Reject" => "Отказ",
+                            "Hold" => "Отложить",
+                            _ => i.Decision.DecisionType.ToString() // на случай, если статус пустой или другой
+                        };
+                        
+                        col.Item().Text($"Решение: {decisionText}");
+                    }
             });
             p.Footer().AlignCenter().Text(t => { t.Span("Стр. "); t.CurrentPageNumber(); });
         })).GeneratePdf();
