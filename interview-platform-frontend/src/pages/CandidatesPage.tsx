@@ -7,6 +7,12 @@ import { PageHeader, Spinner, EmptyState, ErrorState, StatusBadge, Pagination } 
 
 type SortField = "fullName" | "city" | "status";
 type SortOrder = "asc" | "desc" | null;
+const STATUS_RU: Record<string, string> = {
+  New: "Новый", 
+  InProgress: "Отложен", 
+  Hired: "Оффер", 
+  Rejected: "Отказ",
+};
 
 export default function CandidatesPage() {
   const navigate = useNavigate();
@@ -234,7 +240,7 @@ export default function CandidatesPage() {
                           {getUniqueValues("status").map(status => (
                             <label key={status} className="filter-dropdown-item">
                               <input type="checkbox" checked={selectedStatuses.includes(status)} onChange={() => handleToggleStatus(status)} />
-                              {status}
+                              {STATUS_RU[status] || status} {/* <- Теперь здесь красивый русский текст */}
                             </label>
                           ))}
                         </div>

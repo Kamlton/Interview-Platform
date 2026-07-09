@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { archiveApi } from "../api";
 import { apiError } from "../api/client";
 import { useAuth } from "../auth/AuthContext";
@@ -79,7 +80,7 @@ export default function ArchivePage() {
                 <tr>
                     <th className="sortable" onClick={() => toggleSort("title")}>Название{arrow("title")}</th>
                     <th className="sortable" onClick={() => toggleSort("type")}>Тип{arrow("type")}</th>
-                    <th>Доп.</th>
+                    {/* Столбец "Доп." удален отсюда */}
                     <th className="sortable" onClick={() => toggleSort("date")}>Создано{arrow("date")}</th>
                     {isAdmin && <th style={{ width: 1 }}>Действия</th>}
                 </tr>
@@ -89,13 +90,25 @@ export default function ArchivePage() {
                   <tr key={`${it.type}-${it.id}`}>
                     <td>{it.title}</td>
                     <td><span className="chip">{it.typeLabel}</span></td>
-                    <td className="muted">{it.subtitle || "—"}</td>
+                    {/* Ячейка с subtitle удалена отсюда */}
                     <td className="muted">{new Date(it.createdAt).toLocaleDateString("ru-RU")}</td>
                     {isAdmin && (
                         <td>
-                        <div className="btn-row" style={{ justifyContent: "flex-end" }}>
-                            <button className="btn btn-ghost btn-sm" onClick={() => restore(it)}>Вернуть</button>
-                            <button className="btn btn-danger btn-sm" onClick={() => remove(it)}>Удалить</button>
+                        <div className="btn-row-nowrap" style={{ justifyContent: "flex-end" }}>
+                            <button 
+                              className="btn btn-ghost btn-icon-sm" 
+                              onClick={() => restore(it)} 
+                              title="Вернуть в систему"
+                            >
+                              ↻
+                            </button>
+                            <button 
+                              className="btn btn-danger btn-icon-sm" 
+                              onClick={() => remove(it)} 
+                              title="Удалить навсегда"
+                            >
+                              ×
+                            </button>
                         </div>
                         </td>
                     )}
